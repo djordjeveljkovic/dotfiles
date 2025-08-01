@@ -1,6 +1,5 @@
 #!/bin/bash
 
-# Power menu for Omarchy
 # Provides power off, restart, and sleep options
 
 # Function to show power menu. The first characters are invisible sort keys.

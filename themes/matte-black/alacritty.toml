@@ -1,9 +1,3 @@
-# ────────────────────────────────────────────────────────────
-# Omarchy Matte Black Theme for Alacritty
-# By tahayvr
-# https://github.com/tahayvr
-# ────────────────────────────────────────────────────────────
-
 [window]
 # window padding {px}
 padding.x = 12

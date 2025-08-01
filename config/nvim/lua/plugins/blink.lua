@@ -24,7 +24,7 @@ return {
                     -- per_filetype = {
                     --     codecompanion = { "codecompanion" },
                     -- },
-                    default = { "laravel", "lazydev", "lsp", "path", "snippets", "buffer" },
+                    default = {  "lazydev", "lsp", "path", "snippets", "buffer" },
                     providers = {
                         lazydev = {
                             name = "LazyDev",
@@ -41,10 +41,10 @@ return {
                         --     score_offset = 1000, -- Highest priority
                         --     min_keyword_length = 1,
                         -- },
-                        laravel = {
-                            name = "laravel",
-                            module = "laravel.blink_source",
-                        },
+                        -- laravel = {
+                        --     name = "laravel",
+                        --     module = "laravel.blink_source",
+                        -- },
                         cmdline = {
                             min_keyword_length = 2,
                         },
