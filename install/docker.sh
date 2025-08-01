@@ -22,13 +22,13 @@ gum spin --spinner dot --title "Installing podman and podman-compose..." -- bash
 
 # 2. Enable and start rootless podman.service
 gum spin --spinner dot --title "Enabling rootless podman.service..." -- bash -c '
-  systemctl  daemon-reexec
-  systemctl  enable --now podman.service >/dev/null
+  sudo systemctl daemon-reexec
+  sudo systemctl enable --now podman.service >/dev/null
 '
 
 # 3. Enable and start Docker-compatible Podman socket
 gum spin --spinner dot --title "Enabling Docker-compatible podman.socket..." -- bash -c '
-  systemctl enable --now podman.socket >/dev/null
+  sudo systemctl enable --now podman.socket >/dev/null
 '
 
 # 4. Configure container log rotation
