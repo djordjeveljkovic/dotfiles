@@ -93,7 +93,7 @@ if ! command -v plymouth &>/dev/null; then
     echo ""
   fi
 
-  sudo cp .dots/plymouth_image.png /usr/share/plymouth/themes/spinner/watermark.png
+  sudo cp ~/.dots/plymouth_image.png /usr/share/plymouth/themes/spinner/watermark.png
 
   sudo plymouth-set-default-theme -R bgtr
 fi
