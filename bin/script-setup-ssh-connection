@@ -1,0 +1,107 @@
+#!/bin/bash
+
+set -e
+
+# Check dependencies
+for cmd in ssh-keygen curl gum; do
+  if ! command -v "$cmd" &>/dev/null; then
+    echo "❌ Required command '$cmd' is not installed."
+    exit 1
+  fi
+done
+
+# Detect package manager
+install_pkg() {
+  if command -v pacman &>/dev/null; then
+    sudo pacman -Sy --noconfirm "$1"
+  elif command -v apt &>/dev/null; then
+    sudo apt update && sudo apt install -y "$1"
+  elif command -v dnf &>/dev/null; then
+    sudo dnf install -y "$1"
+  else
+    gum style --foreground 1 "Unsupported package manager. Install $1 manually."
+    exit 1
+  fi
+}
+
+# Ensure openssh is installed
+if ! command -v sshd &>/dev/null; then
+  gum style --foreground 3 "Installing OpenSSH..."
+  install_pkg openssh
+fi
+
+# Enable and start sshd
+gum style --foreground 2 "🔧 Enabling and starting SSH server..."
+sudo systemctl enable --now sshd
+
+# Ask for SSH key name
+KEY_NAME=$(gum input --placeholder "Enter SSH key name (e.g. id_ed25519_secure)")
+[[ -z "$KEY_NAME" ]] && gum style --foreground 1 "SSH key name is required." && exit 1
+KEY_PATH="$HOME/.ssh/$KEY_NAME"
+
+# Generate SSH key if not exists
+if [[ -f "$KEY_PATH" ]]; then
+  gum style --foreground 3 "SSH key already exists at $KEY_PATH"
+else
+  ssh-keygen -t ed25519 -f "$KEY_PATH" -C "$USER@$(hostname)" -N ""
+  gum style --foreground 2 "✅ SSH key generated: $KEY_PATH"
+fi
+
+# Ensure .ssh directory and authorized_keys
+mkdir -p "$HOME/.ssh"
+chmod 700 "$HOME/.ssh"
+touch "$HOME/.ssh/authorized_keys"
+chmod 600 "$HOME/.ssh/authorized_keys"
+
+# Append public key if not already in file
+PUB_KEY=$(cat "${KEY_PATH}.pub")
+if ! grep -qF "$PUB_KEY" "$HOME/.ssh/authorized_keys"; then
+  echo "$PUB_KEY" >> "$HOME/.ssh/authorized_keys"
+  gum style --foreground 2 "✅ Public key added to authorized_keys"
+else
+  gum style --foreground 3 "🔎 Public key already present in authorized_keys"
+fi
+
+# Harden sshd_config
+gum style --foreground 2 "🔒 Hardening SSH configuration..."
+sudo sed -i \
+  -e 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' \
+  -e 's/^#\?ChallengeResponseAuthentication.*/ChallengeResponseAuthentication no/' \
+  -e 's/^#\?PermitEmptyPasswords.*/PermitEmptyPasswords no/' \
+  -e 's/^#\?UsePAM.*/UsePAM no/' \
+  -e 's/^#\?PermitRootLogin.*/PermitRootLogin no/' \
+  /etc/ssh/sshd_config
+
+# Optional: restrict login to current user
+ALLOW=$(gum confirm "Restrict SSH login to current user only ('$USER')?")
+if [[ "$ALLOW" == "true" ]]; then
+  if ! grep -q "^AllowUsers" /etc/ssh/sshd_config; then
+    echo "AllowUsers $USER" | sudo tee -a /etc/ssh/sshd_config >/dev/null
+  else
+    sudo sed -i "s/^AllowUsers.*/AllowUsers $USER/" /etc/ssh/sshd_config
+  fi
+  gum style --foreground 2 "✅ SSH access restricted to user: $USER"
+fi
+
+# Restart sshd to apply changes
+sudo systemctl restart sshd
+gum style --foreground 2 "🔁 SSH service restarted"
+
+# Configure firewall (optional)
+if command -v ufw &>/dev/null; then
+  gum style --foreground 2 "📛 Allowing SSH in UFW..."
+  sudo ufw allow OpenSSH
+  sudo ufw enable
+elif command -v firewall-cmd &>/dev/null; then
+  gum style --foreground 2 "📛 Allowing SSH in firewalld..."
+  sudo firewall-cmd --permanent --add-service=ssh
+  sudo firewall-cmd --reload
+else
+  gum style --foreground 3 "⚠️ No firewall tool detected. SSH port may be blocked externally."
+fi
+
+# Final confirmation
+gum style --foreground 2 "✅ SSH server setup complete."
+gum style --foreground 3 "💡 You can now connect using:"
+echo -e "\n  ssh -i $KEY_PATH $USER@<your-ip>\n"
+
