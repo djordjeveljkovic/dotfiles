@@ -1,0 +1,97 @@
+@import url("../../.dots/current/theme/waybar.css");
+
+/* === Global Defaults === */
+* {
+  background-color: transparent;
+  color: @foreground;
+  font-family: "Ubuntu Mono", monospace;
+  font-size: 12px;
+}
+
+/* === Module Group Margins === */
+.modules-left, .modules-center, .modules-right { margin-top: 6px; }
+
+.modules-left {
+  margin-left: 8px;
+}
+
+.modules-right {
+  margin-right: 8px;
+}
+
+/* === Group Background Containers === */
+.modules-left,
+.modules-right {
+  background-color: @background;
+  border-radius: 6px;
+  padding: 0;
+}
+
+/* === Clock Module === */
+#clock {
+  background-color: @background;
+  padding: 6px 8px;
+  margin: 0 4px;
+  border-radius: 6px;
+}
+
+/* === Tooltip Styling === */
+tooltip {
+  padding: 2px;
+  background-color: @background;
+  border-radius: 6px;
+}
+
+/* === Workspaces === */
+#workspaces button {
+  all: initial;
+  color: @foreground;
+  padding: 4px 0;
+  margin-right: 8px;
+  border-radius: 6px;
+  background: transparent;
+}
+
+#workspaces button:first-child {
+  padding-left: 8px;
+}
+
+/* === Right-side Modules === */
+#network {
+  padding-left: 6px;
+  margin-left: 6px;
+}
+
+#network,
+#battery,
+#cpu,
+#bluetooth,
+#pulseaudio {
+  padding-right: 8px;
+  margin-right: 8px;
+  background: transparent;
+}
+
+/* === Optional: Uncomment for full opaque background === */
+/* #waybar { background-color: @background; } */
+/* .modules-left, .modules-center, .modules-right { margin: 0; } */
+
+/* === Optional: Uncomment to remove margins and top rounding for "top" mode === */
+/* .modules-left, .modules-center, .modules-right { margin: 0; } */
+/**/
+/* .modules-left { */
+/*   border-top-left-radius: 0; */
+/*   border-top-right-radius: 0; */
+/*   border-bottom-left-radius: 0; */
+/* } */
+/**/
+/* #clock { */
+/*   border-top-left-radius: 0; */
+/*   border-top-right-radius: 0; */
+/* } */
+/**/
+/* .modules-right { */
+/*   border-top-left-radius: 0; */
+/*   border-top-right-radius: 0; */
+/*   border-bottom-right-radius: 0; */
+/* } */

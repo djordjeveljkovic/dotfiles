@@ -1,0 +1,19 @@
+# Technicolor dreams
+force_color_prompt=yes
+color_prompt=yes
+
+# Function to get current git branch name (if inside a git repo)
+git_branch() {
+  # Check if we are inside a git repo
+  if git rev-parse --is-inside-work-tree &>/dev/null; then
+    # Get the branch name
+    branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+    if [ -n "$branch" ]; then
+      echo " $branch"
+    fi
+  fi
+}
+# Simple prompt with path in the window/pane title and caret for typing line
+PS1=$'\uf0a9 '
+PS1='\[\e]0;\w\a\]\w $(git_branch)\n\[\e[0;37m\] \[\e[0m\]'
+# PS1="\[\e]0;\w\a\]$PS1 "

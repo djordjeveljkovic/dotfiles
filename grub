@@ -1,0 +1,26 @@
+# GRUB Boot Loader Configuration
+
+GRUB_DEFAULT=0
+GRUB_TIMEOUT=0
+GRUB_TIMEOUT_STYLE=hidden
+GRUB_DISTRIBUTOR="Arch"
+
+# Quiet boot with splash and minimal logs
+GRUB_CMDLINE_LINUX_DEFAULT="quiet loglevel=0 splash"
+GRUB_CMDLINE_LINUX="rootfstype=ext4"
+
+# Preload GPT module (for GPT partitioning only)
+GRUB_PRELOAD_MODULES="part_gpt"
+
+# Use plain console to avoid GRUB messages like "Loading Linux"
+GRUB_TERMINAL=console
+
+# Use native resolution in the kernel after boot
+GRUB_GFXPAYLOAD_LINUX=keep
+
+# Disable recovery entries
+GRUB_DISABLE_RECOVERY=true
+
+# Detect other OSes (set false if you want to keep detection)
+GRUB_DISABLE_OS_PROBER=false
+

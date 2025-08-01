@@ -1,0 +1,48 @@
+#!/bin/bash
+set -e
+
+MON_DIR="$HOME/.dots/default/hypr/monitors"
+TARGET="$HOME/.dots/default/hypr/monitors.conf"
+
+# Show options in Wofi
+choice=$(printf "Extend\nMirror\nOnly External\nOnly Internal\n" | \
+  wofi --show dmenu \
+       --prompt "Display Mode" \
+       --width 100 --height 155 \
+       --style ~/.dots/default/wofi/select.css)
+
+# Map choice to profile filename
+case "$choice" in
+  Extend)           profile="extend" ;;
+  Mirror)           profile="mirror" ;;
+  "Only External")  profile="external" ;;
+  "Only Internal")  profile="internal" ;;
+  *) exit 0 ;;
+esac
+
+src="$MON_DIR/$profile.conf"
+if [[ ! -r "$src" ]]; then
+  notify-send "Display Switcher" "Can't read profile: $profile"
+  exit 1
+fi
+
+cp "$src" "$TARGET"
+hyprctl reload
+sleep 0.5  # Give Hyprland time to apply new config
+
+# Move workspaces based on selected profile
+case "$profile" in
+  external)
+    for ws in {1..10}; do
+      hyprctl dispatch moveworkspacetomonitor "$ws" HDMI-A-1
+    done
+    ;;
+  internal)
+    for ws in {1..10}; do
+      hyprctl dispatch moveworkspacetomonitor "$ws" eDP-1
+    done
+    ;;
+esac
+
+notify-send "Display Switcher" "Applied profile: $profile"
+

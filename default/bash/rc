@@ -1,0 +1,8 @@
+source ~/.dots/default/bash/prompt
+source ~/.dots/default/bash/shell
+source ~/.dots/default/bash/aliases
+source ~/.dots/default/bash/functions
+source ~/.dots/default/bash/init
+source ~/.dots/default/bash/envs
+source ~/.dots/default/bash/flutter
+bind -f ~/.dots/default/bash/inputrc
