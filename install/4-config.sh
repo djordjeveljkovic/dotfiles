@@ -1,5 +1,5 @@
 # Copy over configs
-cp -R ~/.dots/.config ~/
+cp -R ~/.dots/config ~/.config 
 
 # Setup GPG configuration with multiple keyservers for better reliability
 sudo mkdir -p /etc/gnupg
