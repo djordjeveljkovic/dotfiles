@@ -17,7 +17,7 @@ gum spin --spinner dot --title "Enabling rootless podman.service..." -- \
 
 # 3. Enable and start Docker-compatible Podman socket
 gum spin --spinner dot --title "Enabling Docker-compatible podman.socket..." -- \
-  systemctl --user enable --now podman.socket
+  systemctl enable --now podman.socket
 
 # 4. Configure container log rotation
 gum spin --spinner dot --title "Configuring container log rotation..." -- bash -c '
