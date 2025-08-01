@@ -1,99 +1,79 @@
 #!/usr/bin/env bash
 
-if ! command -v plymouth &>/dev/null; then
-  yay -S --noconfirm --needed plymouth
+set -euo pipefail
 
-  # Skip if plymouth already exists for some reason
-  # Backup original mkinitcpio.conf just in case
-  backup_timestamp=$(date +"%Y%m%d%H%M%S")
-  sudo cp /etc/mkinitcpio.conf "/etc/mkinitcpio.conf.bak.${backup_timestamp}"
+APP_DIR="$HOME/.dots"
+THEME_NAME="bgtr"
+IMAGE_SOURCE="$APP_DIR/plymouth_image.png"
+IMAGE_TARGET="/usr/share/plymouth/themes/spinner/watermark.png"
+PLYMOUTH_INSTALLED=$(command -v plymouth)
 
-  # Add plymouth to HOOKS array after 'base udev' or 'base systemd'
-  if grep "^HOOKS=" /etc/mkinitcpio.conf | grep -q "base systemd"; then
-    sudo sed -i '/^HOOKS=/s/base systemd/base systemd plymouth/' /etc/mkinitcpio.conf
-  elif grep "^HOOKS=" /etc/mkinitcpio.conf | grep -q "base udev"; then
-    sudo sed -i '/^HOOKS=/s/base udev/base udev plymouth/' /etc/mkinitcpio.conf
-  else
-    echo "Couldn't add the Plymouth hook"
-  fi
+timestamp=$(date +"%Y%m%d%H%M%S")
 
-  # Regenerate initramfs
-  sudo mkinitcpio -P
-
-  # Add kernel parameters for Plymouth (systemd-boot only)
-  if [ -d "/boot/loader/entries" ]; then
-    echo "Detected systemd-boot"
-
-    for entry in /boot/loader/entries/*.conf; do
-      if [ -f "$entry" ]; then
-        # Skip fallback entries
-        if [[ "$(basename "$entry")" == *"fallback"* ]]; then
-          echo "Skipped: $(basename "$entry") (fallback entry)"
-          continue
-        fi
-
-        # Skip if splash it already present for some reason
-        if ! grep -q "splash" "$entry"; then
-          sudo sed -i '/^options/ s/$/ splash quiet/' "$entry"
-        else
-          echo "Skipped: $(basename "$entry") (splash already present)"
-        fi
-      fi
-    done
-  elif [ -f "/etc/default/grub" ]; then
-    echo "Detected grub"
-    # Backup GRUB config before modifying
-    backup_timestamp=$(date +"%Y%m%d%H%M%S")
-    sudo cp /etc/default/grub "/etc/default/grub.bak.${backup_timestamp}"
-
-    sudo cp ~/.dots/grub /etc/default/grub
-
-    # Regenerate grub config
-    sudo grub-mkconfig -o /boot/grub/grub.cfg
-  elif [ -d "/etc/cmdline.d" ]; then
-    echo "Detected a UKI setup"
-    # Relying on mkinitcpio to assemble a UKI
-    # https://wiki.archlinux.org/title/Unified_kernel_image
-    if ! grep -q splash /etc/cmdline.d/*.conf; then
-      echo "splash" | sudo tee -a /etc/cmdline.d/defo.conf
-    fi
-    if ! grep -q quiet /etc/cmdline.d/*.conf; then
-      # Need quiet, create or append the defo file
-      echo "quiet" | sudo tee -a /etc/cmdline.d/defo.conf
-    fi
-  elif [ -f "/etc/kernel/cmdline" ]; then
-    # Alternate UKI kernel cmdline location
-    echo "Detected a UKI setup"
-
-    # Backup kernel cmdline config before modifying
-    backup_timestamp=$(date +"%Y%m%d%H%M%S")
-    sudo cp /etc/kernel/cmdline "/etc/kernel/cmdline.bak.${backup_timestamp}"
-
-    current_cmdline=$(cat /etc/kernel/cmdline)
-
-    # Add splash and quiet if not present
-    new_cmdline="$current_cmdline"
-    if [[ ! "$current_cmdline" =~ splash ]]; then
-      new_cmdline="$new_cmdline splash"
-    fi
-    if [[ ! "$current_cmdline" =~ quiet ]]; then
-      new_cmdline="$new_cmdline quiet"
-    fi
-
-    # Trim any leading/trailing spaces
-    new_cmdline=$(echo "$new_cmdline" | xargs)
-
-    # Write new file
-    echo $new_cmdline | sudo tee /etc/kernel/cmdline
-  else
-    echo ""
-    echo "Neither systemd-boot nor GRUB detected. Please manually add these kernel parameters:"
-    echo "  - splash (to see the graphical splash screen)"
-    echo "  - quiet (for silent boot)"
-    echo ""
-  fi
-
-  sudo cp ~/.dots/plymouth_image.png /usr/share/plymouth/themes/spinner/watermark.png
-
-  sudo plymouth-set-default-theme -R bgtr
+# Install plymouth if not present
+if [[ -z "$PLYMOUTH_INSTALLED" ]]; then
+    yay -S --noconfirm --needed plymouth
 fi
+
+echo "🔧 Configuring Plymouth..."
+
+# Backup and modify mkinitcpio.conf
+if grep -q "^HOOKS=" /etc/mkinitcpio.conf && ! grep -q "plymouth" /etc/mkinitcpio.conf; then
+    echo "🛡️  Backing up /etc/mkinitcpio.conf..."
+    sudo cp /etc/mkinitcpio.conf "/etc/mkinitcpio.conf.bak.${timestamp}"
+
+    if grep -q "base systemd" /etc/mkinitcpio.conf; then
+        sudo sed -i '/^HOOKS=/s/base systemd/base systemd plymouth/' /etc/mkinitcpio.conf
+    elif grep -q "base udev" /etc/mkinitcpio.conf; then
+        sudo sed -i '/^HOOKS=/s/base udev/base udev plymouth/' /etc/mkinitcpio.conf
+    else
+        echo "⚠️  Could not find base systemd or base udev in HOOKS"
+    fi
+
+    echo "📦 Rebuilding initramfs..."
+    sudo mkinitcpio -P
+fi
+
+# Kernel bootloader detection and config
+if [ -d "/boot/loader/entries" ]; then
+    echo "🖋️  Detected systemd-boot"
+    for entry in /boot/loader/entries/*.conf; do
+        [[ "$(basename "$entry")" == *fallback* ]] && continue
+
+        if ! grep -q "splash" "$entry"; then
+            sudo sed -i '/^options/ s/$/ splash quiet/' "$entry"
+        fi
+    done
+
+elif [ -f "/etc/default/grub" ]; then
+    echo "🖋️  Detected GRUB"
+    sudo cp /etc/default/grub "/etc/default/grub.bak.${timestamp}"
+    sudo cp "$APP_DIR/grub" /etc/default/grub
+    sudo grub-mkconfig -o /boot/grub/grub.cfg
+
+elif [ -d "/etc/cmdline.d" ]; then
+    echo "🖋️  Detected UKI (cmdline.d)"
+    defo_file="/etc/cmdline.d/defo.conf"
+    [[ -f "$defo_file" ]] || sudo touch "$defo_file"
+    grep -q splash "$defo_file" || echo "splash" | sudo tee -a "$defo_file"
+    grep -q quiet "$defo_file" || echo "quiet" | sudo tee -a "$defo_file"
+
+elif [ -f "/etc/kernel/cmdline" ]; then
+    echo "🖋️  Detected UKI (/etc/kernel/cmdline)"
+    sudo cp /etc/kernel/cmdline "/etc/kernel/cmdline.bak.${timestamp}"
+    cmdline=$(< /etc/kernel/cmdline)
+    [[ "$cmdline" != *splash* ]] && cmdline="$cmdline splash"
+    [[ "$cmdline" != *quiet* ]] && cmdline="$cmdline quiet"
+    echo "$cmdline" | xargs | sudo tee /etc/kernel/cmdline > /dev/null
+
+else
+    echo -e "\n⚠️  Bootloader not recognized. Please add 'splash quiet' manually to kernel parameters.\n"
+fi
+
+# Set Plymouth theme and image
+echo "🖼️  Setting Plymouth theme and custom image..."
+sudo cp "$IMAGE_SOURCE" "$IMAGE_TARGET"
+sudo plymouth-set-default-theme -R "$THEME_NAME"
+
+echo "✅ Plymouth setup complete with '$THEME_NAME' theme and updated image."
+
