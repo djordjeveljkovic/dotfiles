@@ -22,8 +22,8 @@ gum spin --spinner dot --title "Installing podman and podman-compose..." -- bash
 
 # 2. Enable and start rootless podman.service
 gum spin --spinner dot --title "Enabling rootless podman.service..." -- bash -c '
-  systemctl --user daemon-reexec
-  systemctl --user enable --now podman.service >/dev/null
+  systemctl  daemon-reexec
+  systemctl  enable --now podman.service >/dev/null
 '
 
 # 3. Enable and start Docker-compatible Podman socket
@@ -37,7 +37,7 @@ gum spin --spinner dot --title "Configuring container log rotation..." -- bash -
   cat > ~/.config/containers/containers.conf <<EOF
 [containers]
 log_driver = "json-file"
-log_size_max = "10m"
+log_size_max = 10485760
 log_file = 5
 EOF
 '
