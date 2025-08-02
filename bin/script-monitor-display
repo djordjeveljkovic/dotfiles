@@ -1,48 +1,196 @@
 #!/bin/bash
 set -e
 
-MON_DIR="$HOME/.dots/default/hypr/monitors"
+# Set the target configuration file
 TARGET="$HOME/.dots/default/hypr/monitors.conf"
 
-# Show options in Wofi
-choice=$(printf "Extend\nMirror\nOnly External\nOnly Internal\n" | \
+# Function to detect connected monitors
+get_connected_monitors() {
+    # Get list of connected monitors using xrandr
+    xrandr --listmonitors | awk '/^\S/{print $2}'
+}
+
+# Function to get available resolutions for a monitor using xrandr
+get_monitor_resolutions() {
+    monitor=$1
+    xrandr | grep "^$monitor" -A 10 | grep -Eo "[0-9]+x[0-9]+"
+}
+
+# Show options in Wofi for Display Mode
+choice=$(printf "Display\nMirror\nExtend\n" | \
   wofi --show dmenu \
        --prompt "Display Mode" \
        --width 100 --height 155 \
        --style ~/.dots/default/wofi/select.css)
 
-# Map choice to profile filename
+# Map choice to profile and generate monitor configurations
 case "$choice" in
-  Extend)           profile="extend" ;;
-  Mirror)           profile="mirror" ;;
-  "Only External")  profile="external" ;;
-  "Only Internal")  profile="internal" ;;
-  *) exit 0 ;;
+  Display)
+    profile="display"
+    # Get list of connected monitors dynamically
+    monitors=$(get_connected_monitors)
+    monitors_count=$(echo "$monitors" | wc -l)
+    
+    if [ "$monitors_count" -eq 1 ]; then
+        # Only one monitor detected, configure it as highres, auto, 1
+        first_monitor=$(echo "$monitors" | head -n 1)
+        resolutions=$(get_monitor_resolutions "$first_monitor")
+        
+        # Show resolutions for the first monitor
+        resolution_choice=$(echo "$resolutions" | \
+          wofi --show dmenu \
+               --prompt "Select Resolution for $first_monitor" \
+               --width 100 --height 155 \
+               --style ~/.dots/default/wofi/select.css)
+        
+        cat <<EOF > "$TARGET"
+monitor = $first_monitor, highres, auto, 1, resolution $resolution_choice
+EOF
+    else
+        # Multiple monitors detected, configure all as active
+        cat <<EOF > "$TARGET"
+# Display all connected monitors
+EOF
+        for monitor in $monitors; do
+            resolutions=$(get_monitor_resolutions "$monitor")
+            
+            # Show resolutions for each monitor
+            resolution_choice=$(echo "$resolutions" | \
+              wofi --show dmenu \
+                   --prompt "Select Resolution for $monitor" \
+                   --width 100 --height 155 \
+                   --style ~/.dots/default/wofi/select.css)
+            
+            echo "monitor = $monitor, auto, 1, resolution $resolution_choice" >> "$TARGET"
+        done
+    fi
+    ;;
+  Mirror)
+    profile="mirror"
+    # Generate configuration for mirroring displays dynamically
+    monitors=$(get_connected_monitors)
+    cat <<EOF > "$TARGET"
+# Mirroring displays
+EOF
+    for monitor in $monitors; do
+        resolutions=$(get_monitor_resolutions "$monitor")
+        
+        # Show resolutions for each monitor
+        resolution_choice=$(echo "$resolutions" | \
+          wofi --show dmenu \
+               --prompt "Select Resolution for $monitor" \
+               --width 100 --height 155 \
+               --style ~/.dots/default/wofi/select.css)
+        
+        echo "monitor = $monitor, auto, 1, resolution $resolution_choice" >> "$TARGET"
+    done
+    ;;
+  Extend)
+    profile="extend"
+    # Get list of connected monitors dynamically
+    monitors=$(get_connected_monitors)
+    monitors_count=$(echo "$monitors" | wc -l)
+
+    # Check if there are more than two monitors
+    if [ "$monitors_count" -gt 2 ]; then
+      echo "Multiple monitors detected. You will be prompted to place each monitor relative to others."
+    fi
+
+    # Set up position for the primary monitor (Monitor 1) and secondary (Monitor 2)
+    echo "Select the position for monitor 2 relative to monitor 1:"
+    placement_choice=$(printf "Left\nRight\nUp\nDown" | \
+      wofi --show dmenu \
+           --prompt "Monitor 2 Position (relative to 1)" \
+           --width 100 --height 155 \
+           --style ~/.dots/default/wofi/select.css)
+
+    # Default placement (Right)
+    position="right"
+    case "$placement_choice" in
+      Left)  position="left" ;;
+      Right) position="right" ;;
+      Up)    position="up" ;;
+      Down)  position="down" ;;
+      *)     position="right" ;;
+    esac
+
+    # Generate the configuration for extending the displays
+    first_monitor=$(echo "$monitors" | head -n 1)
+    second_monitor=$(echo "$monitors" | tail -n +2 | head -n 1)
+
+    # Get resolutions for both monitors
+    res_first_monitor=$(get_monitor_resolutions "$first_monitor")
+    res_second_monitor=$(get_monitor_resolutions "$second_monitor")
+
+    resolution_first_monitor=$(echo "$res_first_monitor" | \
+      wofi --show dmenu \
+           --prompt "Select Resolution for $first_monitor" \
+           --width 100 --height 155 \
+           --style ~/.dots/default/wofi/select.css)
+
+    resolution_second_monitor=$(echo "$res_second_monitor" | \
+      wofi --show dmenu \
+           --prompt "Select Resolution for $second_monitor" \
+           --width 100 --height 155 \
+           --style ~/.dots/default/wofi/select.css)
+
+    cat <<EOF > "$TARGET"
+# Extending displays
+monitor = $first_monitor, auto, 1, resolution $resolution_first_monitor
+monitor = $second_monitor, auto, 0, $position, resolution $resolution_second_monitor
+EOF
+
+    # Handle more than two monitors
+    if [ "$monitors_count" -gt 2 ]; then
+      for monitor in $(echo "$monitors" | tail -n +3); do
+        echo "Where should $monitor be placed relative to the others?"
+        additional_position=$(printf "Left\nRight\nUp\nDown" | \
+          wofi --show dmenu \
+               --prompt "Monitor $monitor Position" \
+               --width 100 --height 155 \
+               --style ~/.dots/default/wofi/select.css)
+        
+        # Default to right placement
+        additional_position="right"
+        case "$additional_position" in
+          Left)  additional_position="left" ;;
+          Right) additional_position="right" ;;
+          Up)    additional_position="up" ;;
+          Down)  additional_position="down" ;;
+          *)     additional_position="right" ;;
+        esac
+
+        # Get resolution for the additional monitor
+        resolutions=$(get_monitor_resolutions "$monitor")
+        
+        # Show resolution options
+        resolution_choice=$(echo "$resolutions" | \
+          wofi --show dmenu \
+               --prompt "Select Resolution for $monitor" \
+               --width 100 --height 155 \
+               --style ~/.dots/default/wofi/select.css)
+        
+        # Add the additional monitor configuration
+        cat <<EOF >> "$TARGET"
+monitor = $monitor, auto, 0, $additional_position, resolution $resolution_choice
+EOF
+      done
+    fi
+    ;;
+  *)
+    exit 0
+    ;;
 esac
 
-src="$MON_DIR/$profile.conf"
-if [[ ! -r "$src" ]]; then
-  notify-send "Display Switcher" "Can't read profile: $profile"
+# Reload Hyprland to apply the new configuration
+if ! hyprctl reload; then
+  notify-send "Display Switcher" "Failed to reload Hyprland configuration"
   exit 1
 fi
 
-cp "$src" "$TARGET"
-hyprctl reload
-sleep 0.5  # Give Hyprland time to apply new config
+# Give Hyprland time to apply the new config
+sleep 0.5
 
-# Move workspaces based on selected profile
-case "$profile" in
-  external)
-    for ws in {1..10}; do
-      hyprctl dispatch moveworkspacetomonitor "$ws" HDMI-A-1
-    done
-    ;;
-  internal)
-    for ws in {1..10}; do
-      hyprctl dispatch moveworkspacetomonitor "$ws" eDP-1
-    done
-    ;;
-esac
-
+# Notify that the profile has been successfully applied
 notify-send "Display Switcher" "Applied profile: $profile"
 
