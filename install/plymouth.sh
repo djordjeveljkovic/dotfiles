@@ -6,12 +6,11 @@ APP_DIR="$HOME/.dots"
 THEME_NAME="bgrt"
 IMAGE_SOURCE="$APP_DIR/plymouth_image.png"
 IMAGE_TARGET="/usr/share/plymouth/themes/spinner/watermark.png"
-PLYMOUTH_INSTALLED=$(command -v plymouth)
 
 timestamp=$(date +"%Y%m%d%H%M%S")
 
 # Install plymouth if not present
-if [[ -z "$PLYMOUTH_INSTALLED" ]]; then
+if [[ -z $(command -v plymouth) ]]; then
     yay -S --noconfirm --needed plymouth
 fi
 
