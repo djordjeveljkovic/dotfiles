@@ -3,7 +3,7 @@
 set -euo pipefail
 
 APP_DIR="$HOME/.dots"
-THEME_NAME="bgtr"
+THEME_NAME="bgrt"
 IMAGE_SOURCE="$APP_DIR/plymouth_image.png"
 IMAGE_TARGET="/usr/share/plymouth/themes/spinner/watermark.png"
 PLYMOUTH_INSTALLED=$(command -v plymouth)
