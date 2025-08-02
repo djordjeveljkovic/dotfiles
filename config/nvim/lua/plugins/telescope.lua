@@ -26,6 +26,16 @@ return {
                         ".next",
                     },
                     hidden = true, -- Show hidden files
+                    mappings = {
+                        i = { -- Insert mode mappings
+                            ["<A-j>"] = actions.move_selection_next,  -- Move down
+                            ["<A-k>"] = actions.move_selection_previous, -- Move up
+                        },
+                        n = { -- Normal mode mappings
+                            ["<A-j>"] = actions.move_selection_next,  -- Move down
+                            ["<A-k>"] = actions.move_selection_previous, -- Move up
+                        },
+                    },
                 },
             }
         end,
@@ -37,3 +47,4 @@ return {
         end,
     },
 }
+
