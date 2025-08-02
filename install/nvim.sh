@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-if ! command -v nvim &>/dev/null; then
-    yay -S --noconfirm --needed nvim luarocks tree-sitter-cli \
-        cmake luachek luarocks npm go sed ripgrep composer 
+yay -S --noconfirm --needed nvim luarocks tree-sitter-cli cmake luarocks npm go sed ripgrep composer shellcheck 
 
-    rm -rf ~/.config/nvim
-    cp -R ~/.dots/config/nvim/* ~/.config/nvim/
-fi
+rm -rf ~/.config/nvim
+cp -R ~/.dots/config/nvim/* ~/.config/nvim/
