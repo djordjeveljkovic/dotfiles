@@ -3,5 +3,5 @@ yay -S --noconfirm --needed \
   imagemagick jq \
   mariadb-libs postgresql-libs \
   git github-cli lazygit \
-  podman
+  podman tmux
 

@@ -1,5 +1,6 @@
 # Copy over configs
 cp -R ~/.dots/config ~/.config 
+sudo cp ~/.dots/default/.tmux.conf ~/.tmux.conf
 
 # Setup GPG configuration with multiple keyservers for better reliability
 sudo mkdir -p /etc/gnupg
