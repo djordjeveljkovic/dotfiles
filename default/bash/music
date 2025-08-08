@@ -51,38 +51,36 @@ playlist-dl-play() {
   fi
 
   # 1. Prepare directory and variables
-  gum log --level info --structured -- "Preparing to download playlist"
+  gum log --structured --level info "Preparing to download playlist..."
   PLAYLIST_NAME=$(echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/ /_/g')
   PLAYLIST_URL="$2"
   PLAYLIST_DIR="$HOME/Music/$PLAYLIST_NAME"
-  gum log --level info --structured -- "Playlist Name: $PLAYLIST_NAME"
+  gum log --structured --level info "Playlist Name: $PLAYLIST_NAME"
 
   # Create the directory
-  gum log --level info --structured -- "Creating directory: $PLAYLIST_DIR"
+  gum log --structured --level info "Creating directory: $PLAYLIST_DIR"
   mkdir -p "$PLAYLIST_DIR"
 
   # 2. Start downloading the playlist in the background
-  gum log --level info --structured -- "Starting download in background..."
+  gum log --structured --level info "Starting download in background..."
   (
-    yt-dlp --no-cache-dir --no-simulate-head --force-ipv4 \
+    yt-dlp --no-cache-dir --force-ipv4 \
       --extract-audio --audio-format mp3 --format 'ba/b' \
       --ignore-errors \
-      -o "$PLAYLIST_DIR/%(title)s.%(ext)s" "$PLAYLIST_URL" | gum log
+      -o "$PLAYLIST_DIR/%(title)s.%(ext)s" "$PLAYLIST_URL" | gum log --level info
     
     # Rename the files after they are downloaded
-    gum log --level info --structured -- "Renaming files..."
+    gum log --structured --level info "Renaming files..."
     for file in "$PLAYLIST_DIR"/*; do
       if [ -f "$file" ]; then
         newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /_/g')
         mv "$file" "$PLAYLIST_DIR/$newname"
-        gum log --level info --structured -- "Renamed: $(basename "$file") -> $newname"
+        gum log --structured --level info "Renamed: $(basename "$file") -> $newname"
       fi
     done
   ) &
 
   # 3. Use mpv to monitor the directory and play new files as they appear
-  gum log --level info --structured -- "Starting audio playback..."
-  mpv --no-video --idle --loop=no --shuffle --watch-later-options="start=0" --on-playlist-change=soft \
-    --playlist="$(find "$PLAYLIST_DIR" -type f -name "*.mp3" | sort)" \
-    --watch-later-directory="$PLAYLIST_DIR" "$PLAYLIST_DIR"
+  gum log --structured --level info "Starting audio playback..."
+  mpv --no-video --idle --loop=no --shuffle --playlist="$(find "$PLAYLIST_DIR" -type f -name "*.mp3" | sort)" "$PLAYLIST_DIR"
 }
