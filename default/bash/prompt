@@ -5,12 +5,23 @@ color_prompt=yes
 # Get the SSH connection IP or hostname
 get_ssh_info() {
   if [ -n "$SSH_CLIENT" ]; then
-    # Show SSH remote user, remote IP and local client IP
-    remote_user=$(whoami)                   # remote user (the SSH client)
-    remote_ip=$(echo $SSH_CONNECTION | awk '{print $1}')  # remote IP
-    client_ip=$(hostname -I | awk '{print $1}')           # local client IP
-    echo "ssh $remote_user@$remote_ip | client@$client_ip"
+    # Get remote user, remote IP, and client IP
+    remote_user=$(whoami)                             # Remote user (SSH client)
+    remote_ip=$(echo $SSH_CONNECTION | awk '{print $1}')  # Remote IP (from SSH_CONNECTION)
+    
+    # Use uname or hostnamectl if hostname isn't available
+    if command -v hostnamectl >/dev/null; then
+      client_ip=$(hostnamectl | grep "Static address" | awk '{print $3}')  # Local IP via hostnamectl
+    elif command -v uname >/dev/null; then
+      client_ip=$(uname -n)                            # Local hostname with uname
+    else
+      client_ip=$(hostname -I | awk '{print $1}')      # Default method to get local IP
+    fi
+    
+    # Show the SSH connection details
+    echo "ssh $remote_user@$remote_ip -c client@$client_ip"
   fi
+
 }
 
 # Function to get current git branch name (if inside a git repo)
