@@ -1,0 +1,50 @@
+# This function streams a playlist without downloading the files.
+# It prioritizes the best audio available.
+playlist-play() {
+  if [ -z "$1" ]; then
+    echo "Usage: playlist-play 'URL'"
+    return 1
+  fi
+  yt-dlp --format 'ba' -o - "$1" | mpv --no-video --cache=yes -
+}
+
+# This function downloads and plays a single song.
+# It organizes files by artist and title and includes the thumbnail.
+song-play() {
+  if [ -z "$1" ]; then
+    echo "Usage: song-play 'URL'"
+    return 1
+  fi
+
+  # Get song info to create directory and file name
+  SONG_INFO=$(yt-dlp --print-json "$1")
+  ARTIST=$(echo "$SONG_INFO" | jq -r '.artist // "Unknown Artist"')
+  TITLE=$(echo "$SONG_INFO" | jq -r '.title // "Untitled Song"')
+  
+  # Create the directory for the artist
+  mkdir -p "$HOME/Music/$ARTIST"
+
+  # Download the thumbnail
+  yt-dlp --write-thumbnail --skip-download -o "$HOME/Music/$ARTIST/$TITLE.%(ext)s" "$1"
+
+  # Download the best audio, play it, and save it
+  yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --exec 'mpv --no-video -- "$HOME/Music/$ARTIST/$TITLE.%(ext)s"' -o "$HOME/Music/$ARTIST/$TITLE.%(ext)s" "$1"
+}
+
+# This function downloads a playlist and plays each song sequentially.
+# It organizes files by playlist name and title, and includes thumbnails.
+playlist-dl-play() {
+  if [ -z "$1" ]; then
+    echo "Usage: playlist-dl-play 'URL'"
+    return 1
+  fi
+
+  # Get the playlist title
+  PLAYLIST_TITLE=$(yt-dlp --get-filename -o "%(playlist)s" "$1")
+  
+  # Create the target directory for the playlist
+  mkdir -p "$HOME/Music/$PLAYLIST_TITLE"
+
+  # Download the playlist, play each song as it's completed, and save the thumbnail
+  yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail --exec 'mpv --no-video {}' --ignore-errors -o "$HOME/Music/$PLAYLIST_TITLE/%(title)s.%(ext)s" "$1"
+}
