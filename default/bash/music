@@ -16,25 +16,25 @@ song-play() {
     return 1
   fi
 
-  # Get song info to clean up the artist name
+  # Get song info from yt-dlp's JSON output
   SONG_INFO=$(yt-dlp --print-json "$1")
   ARTIST=$(echo "$SONG_INFO" | jq -r '.artist // "Unknown Artist"')
   TITLE=$(echo "$SONG_INFO" | jq -r '.title // "Untitled Song"')
-
-  # Remove featured artists and clean up the name
-  # This pattern targets common "feat.", "ft.", "&", and "," separators
-  CLEAN_ARTIST=$(echo "$ARTIST" | sed -E 's/(\s+(feat|ft|&|\/).*|\s+,.*)//I' | sed 's/ /_/g')
+  
+  # 1. Clean the artist name: remove features, convert to lowercase, and replace spaces with underscores.
+  CLEAN_ARTIST=$(echo "$ARTIST" | sed -E 's/(\s+(feat|ft|&|\/).*|\s*,.*)//I' | tr '[:upper:]' '[:lower:]' | sed 's/ /_/g')
 
   # Define the output template for the path using the cleaned artist name
   OUTPUT_TEMPLATE="$HOME/Music/$CLEAN_ARTIST/%(title)s.%(ext)s"
-
-  # Download the best audio and thumbnail
+  
+  # 2. Download the best audio and thumbnail. yt-dlp will create the directory for us.
   yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail -o "$OUTPUT_TEMPLATE" "$1"
 
-  # Get the final path of the downloaded file
-  FINAL_PATH=$(yt-dlp --get-filename --extract-audio --audio-format mp3 --format 'ba/b' -o "$OUTPUT_TEMPLATE" "$1")
+  # 3. Construct the FINAL_PATH manually to ensure it's always correct.
+  # This avoids the "file not found" error.
+  FINAL_PATH="$HOME/Music/$CLEAN_ARTIST/$TITLE.mp3"
 
-  # Check if the file was downloaded successfully and then play it
+  # 4. Check if the file was downloaded successfully and then play it.
   if [ -f "$FINAL_PATH" ]; then
     mpv --no-video "$FINAL_PATH"
   else
