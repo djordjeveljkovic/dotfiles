@@ -42,26 +42,24 @@ song-play() {
   fi
 }
 
-# This function downloads a playlist and plays each song sequentially.
-# It organizes files by playlist name and title, and includes thumbnails.
+# This function downloads a playlist, cleans the folder name, and plays each song.
+# It organizes files by a cleaned-up playlist name and includes thumbnails.
 playlist-dl-play() {
   if [ -z "$1" ]; then
     echo "Usage: playlist-dl-play 'URL'"
     return 1
   fi
 
-  # Get the playlist title for the directory name
-  PLAYLIST_TITLE=$(yt-dlp --get-filename -o "%(playlist)s" "$1")
+  # Get the playlist title, convert to lowercase, and replace spaces with underscores.
+  PLAYLIST_TITLE=$(yt-dlp --get-filename -o "%(playlist)s" "$1" | tr '[:upper:]' '[:lower:]' | sed 's/ /_/g')
 
-  # Create the target directory
-  mkdir -p "$HOME/Music/$PLAYLIST_TITLE"
-
-  # Define the output template for the playlist
+  # Define the output template for the playlist using the cleaned title
   OUTPUT_TEMPLATE="$HOME/Music/$PLAYLIST_TITLE/%(title)s.%(ext)s"
 
-  # Download the playlist, save the thumbnails, and then play each song
+  # Download the playlist, save the thumbnails, and ignore any errors.
   yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail --ignore-errors -o "$OUTPUT_TEMPLATE" "$1"
 
-  # Play all the downloaded files in the directory
-  find "$HOME/Music/$PLAYLIST_TITLE" -name "*.mp3" -print0 | xargs -0 mpv --no-video
+  # Play all the downloaded files in the directory.
+  # This finds all .mp3 files and passes them to mpv to play sequentially.
+  find "$HOME/Music/$PLAYLIST_TITLE" -type f -name "*.mp3" -print0 | xargs -0 mpv --no-video
 }
