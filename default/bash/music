@@ -42,25 +42,38 @@ song-play() {
   fi
 }
 
-# This function downloads a playlist, cleans the folder name, and plays each song.
-# It organizes files by a cleaned-up playlist name and includes thumbnails.
+# This function downloads a playlist into a specified folder and streams the audio as it downloads.
+# Usage: playlist-dl-play 'My Playlist' 'https://www.youtube.com/playlist?list=...'
 playlist-dl-play() {
-  if [ -z "$1" ]; then
-    echo "Usage: playlist-dl-play 'URL'"
+  if [ -z "$1" ] || [ -z "$2" ]; then
+    echo "Usage: playlist-dl-play 'playlist_name' 'URL'"
     return 1
   fi
 
-  # Get the playlist title, convert to lowercase, and replace spaces with underscores.
-  PLAYLIST_TITLE=$(yt-dlp --get-filename -o "%(playlist)s" "$1" | tr '[:upper:]' '[:lower:]' | sed 's/ /_/g')
+  PLAYLIST_NAME=$(echo "$1" | tr '[:upper:]' '[:lower:]' | sed 's/ /_/g')
+  PLAYLIST_URL="$2"
+  PLAYLIST_DIR="$HOME/Music/$PLAYLIST_NAME"
 
-  # Define the output template for the playlist using the cleaned title
-  OUTPUT_TEMPLATE="$HOME/Music/$PLAYLIST_TITLE/%(title)s.%(ext)s"
+  mkdir -p "$PLAYLIST_DIR"
 
-  # Download the playlist, save the thumbnails, and ignore any errors.
-  # Added flags for robustness: --no-cache-dir, --no-simulate-head, --force-ipv4
-  yt-dlp --no-cache-dir --no-simulate-head --force-ipv4 --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail --ignore-errors -o "$OUTPUT_TEMPLATE" "$1"
+  # Start downloading the playlist in the background.
+  (
+    yt-dlp --no-cache-dir --no-simulate-head --force-ipv4 \
+      --extract-audio --audio-format mp3 --format 'ba/b' \
+      --ignore-errors \
+      -o "$PLAYLIST_DIR/%(title)s.%(ext)s" "$PLAYLIST_URL"
 
-  # Play all the downloaded files in the directory.
-  # This finds all .mp3 files and passes them to mpv to play sequentially.
-  find "$HOME/Music/$PLAYLIST_TITLE" -type f -name "*.mp3" -print0 | xargs -0 mpv --no-video
+    # Rename the files after they are downloaded
+    for file in "$PLAYLIST_DIR"/*; do
+      if [ -f "$file" ]; then
+        newname=$(basename "$file" | tr '[:upper:]' '[:lower:]' | sed 's/ /_/g')
+        mv "$file" "$PLAYLIST_DIR/$newname"
+      fi
+    done
+  ) &
+
+  # Use mpv to monitor the directory and play new files as they appear.
+  mpv --no-video --idle --loop=no --shuffle --watch-later-options="start=0" --on-playlist-change=soft \
+    --playlist="$(find "$PLAYLIST_DIR" -type f -name "*.mp3" | sort)" \
+    --watch-later-directory="$PLAYLIST_DIR" "$PLAYLIST_DIR"
 }
