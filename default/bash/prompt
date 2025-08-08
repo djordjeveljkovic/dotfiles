@@ -2,6 +2,17 @@
 force_color_prompt=yes
 color_prompt=yes
 
+# Get the SSH connection IP or hostname
+get_ssh_info() {
+  if [ -n "$SSH_CLIENT" ]; then
+    # Show SSH remote user, remote IP and local client IP
+    remote_user=$(whoami)                   # remote user (the SSH client)
+    remote_ip=$(echo $SSH_CONNECTION | awk '{print $1}')  # remote IP
+    client_ip=$(hostname -I | awk '{print $1}')           # local client IP
+    echo "ssh $remote_user@$remote_ip | client@$client_ip"
+  fi
+}
+
 # Function to get current git branch name (if inside a git repo)
 git_branch() {
   # Check if we are inside a git repo
@@ -15,5 +26,6 @@ git_branch() {
 }
 # Simple prompt with path in the window/pane title and caret for typing line
 PS1=$'\uf0a9 '
-PS1='\[\e]0;\w\a\]\w $(git_branch)\n\[\e[0;37m\] \[\e[0m\]'
+PS1='\[\e]0;\w\a\]\w $(git_branch) $(get_ssh_info)\n\[\e[0;37m\] \[\e[0m\]'
+#PS1='\[\e]0;\w\a\]\w $(git_branch)\n\[\e[0;37m\] \[\e[0m\]'
 # PS1="\[\e]0;\w\a\]$PS1 "
