@@ -57,7 +57,8 @@ playlist-dl-play() {
   OUTPUT_TEMPLATE="$HOME/Music/$PLAYLIST_TITLE/%(title)s.%(ext)s"
 
   # Download the playlist, save the thumbnails, and ignore any errors.
-  yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail --ignore-errors -o "$OUTPUT_TEMPLATE" "$1"
+  # Added flags for robustness: --no-cache-dir, --no-simulate-head, --force-ipv4
+  yt-dlp --no-cache-dir --no-simulate-head --force-ipv4 --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail --ignore-errors -o "$OUTPUT_TEMPLATE" "$1"
 
   # Play all the downloaded files in the directory.
   # This finds all .mp3 files and passes them to mpv to play sequentially.
