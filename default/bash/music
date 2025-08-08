@@ -16,8 +16,17 @@ song-play() {
     return 1
   fi
 
-  # Define a template for the output path
-  OUTPUT_TEMPLATE="$HOME/Music/%(artist)s/%(title)s.%(ext)s"
+  # Get song info to clean up the artist name
+  SONG_INFO=$(yt-dlp --print-json "$1")
+  ARTIST=$(echo "$SONG_INFO" | jq -r '.artist // "Unknown Artist"')
+  TITLE=$(echo "$SONG_INFO" | jq -r '.title // "Untitled Song"')
+
+  # Remove featured artists and clean up the name
+  # This pattern targets common "feat.", "ft.", "&", and "," separators
+  CLEAN_ARTIST=$(echo "$ARTIST" | sed -E 's/(\s+(feat|ft|&|\/).*|\s+,.*)//I' | sed 's/ /_/g')
+
+  # Define the output template for the path using the cleaned artist name
+  OUTPUT_TEMPLATE="$HOME/Music/$CLEAN_ARTIST/%(title)s.%(ext)s"
 
   # Download the best audio and thumbnail
   yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail -o "$OUTPUT_TEMPLATE" "$1"
