@@ -16,19 +16,21 @@ song-play() {
     return 1
   fi
 
-  # Get song info to create directory and file name
-  SONG_INFO=$(yt-dlp --print-json "$1")
-  ARTIST=$(echo "$SONG_INFO" | jq -r '.artist // "Unknown Artist"')
-  TITLE=$(echo "$SONG_INFO" | jq -r '.title // "Untitled Song"')
-  
-  # Create the directory for the artist
-  mkdir -p "$HOME/Music/$ARTIST"
+  # Define a template for the output path
+  OUTPUT_TEMPLATE="$HOME/Music/%(artist)s/%(title)s.%(ext)s"
 
-  # Download the thumbnail
-  yt-dlp --write-thumbnail --skip-download -o "$HOME/Music/$ARTIST/$TITLE.%(ext)s" "$1"
+  # Download the best audio and thumbnail
+  yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail -o "$OUTPUT_TEMPLATE" "$1"
 
-  # Download the best audio, play it, and save it
-  yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --exec 'mpv --no-video -- "$HOME/Music/$ARTIST/$TITLE.%(ext)s"' -o "$HOME/Music/$ARTIST/$TITLE.%(ext)s" "$1"
+  # Get the final path of the downloaded file
+  FINAL_PATH=$(yt-dlp --get-filename --extract-audio --audio-format mp3 --format 'ba/b' -o "$OUTPUT_TEMPLATE" "$1")
+
+  # Check if the file was downloaded successfully and then play it
+  if [ -f "$FINAL_PATH" ]; then
+    mpv --no-video "$FINAL_PATH"
+  else
+    echo "Error: Downloaded file not found at $FINAL_PATH"
+  fi
 }
 
 # This function downloads a playlist and plays each song sequentially.
@@ -39,12 +41,18 @@ playlist-dl-play() {
     return 1
   fi
 
-  # Get the playlist title
+  # Get the playlist title for the directory name
   PLAYLIST_TITLE=$(yt-dlp --get-filename -o "%(playlist)s" "$1")
-  
-  # Create the target directory for the playlist
+
+  # Create the target directory
   mkdir -p "$HOME/Music/$PLAYLIST_TITLE"
 
-  # Download the playlist, play each song as it's completed, and save the thumbnail
-  yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail --exec 'mpv --no-video {}' --ignore-errors -o "$HOME/Music/$PLAYLIST_TITLE/%(title)s.%(ext)s" "$1"
+  # Define the output template for the playlist
+  OUTPUT_TEMPLATE="$HOME/Music/$PLAYLIST_TITLE/%(title)s.%(ext)s"
+
+  # Download the playlist, save the thumbnails, and then play each song
+  yt-dlp --extract-audio --audio-format mp3 --format 'ba/b' --write-thumbnail --ignore-errors -o "$OUTPUT_TEMPLATE" "$1"
+
+  # Play all the downloaded files in the directory
+  find "$HOME/Music/$PLAYLIST_TITLE" -name "*.mp3" -print0 | xargs -0 mpv --no-video
 }
