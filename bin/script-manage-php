@@ -1,0 +1,187 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# --- PRE-FLIGHT CHECKS ---
+check_deps() {
+    # ARCH MOD: Check for pacman instead of apt. yay is for AUR packages.
+    for cmd in gum nvim pacman sudo yay; do
+        if ! command -v "$cmd" &>/dev/null; then
+            echo "❌ Error: Required command '$cmd' is not installed. Please install it to continue."
+            exit 1
+        fi
+    done
+    if [[ $EUID -eq 0 ]]; then
+       echo "❌ This script should not be run as root. It will use 'sudo' when needed."
+       exit 1
+    fi
+}
+
+# --- HELPERS ---
+get_active_version() {
+    if ! command -v php &>/dev/null; then echo "None"; return; fi
+    php -v | head -n 1 | cut -d' ' -f2 | cut -d'.' -f1,2
+}
+
+list_installed_versions() {
+    # ARCH MOD: Find all php executables, including versioned ones for AUR installs
+    find /usr/bin/ -name "php*" -type f -executable | grep -oP 'php[0-9]*' | sed 's/php//' | sort -urV || true
+}
+
+_install_php_packages() {
+    local packages=("$@")
+    echo "Installing: ${packages[*]}"
+    # ARCH MOD: Use pacman instead of apt
+    gum spin --spinner dot --title "Running pacman -S..." -- \
+        sudo pacman -S --noconfirm --needed "${packages[@]}"
+}
+
+_install_aur_package() {
+    local package="$1"
+    echo "Installing '$package' from the AUR..."
+    gum spin --spinner dot --title "Running yay -S..." -- \
+        yay -S --noconfirm --needed "$package"
+}
+
+# --- CORE FEATURES ---
+install_version() {
+    local version_input
+    version_input=$(gum input --placeholder "Enter PHP version (e.g., 8.3, 8.2, 7.4)")
+    if [[ -z "$version_input" ]]; then return; fi
+    
+    local version_major=${version_input//.} # 8.3 -> 83
+    local package_name="php${version_major}"
+    local is_aur=true
+    
+    # ARCH MOD: Check if the version is in the main repo (usually the latest)
+    if pacman -Si "php" | grep -q "Version.*$version_input"; then
+        package_name="php"
+        is_aur=false
+    fi
+
+    echo "Preparing to install PHP $version_input..."
+    if $is_aur; then
+        _install_aur_package "$package_name"
+    else
+        # Install the main package and its extensions
+        local extensions=(
+            "php-gd" "php-intl" # These are common extensions
+        )
+        _install_php_packages "$package_name" "${extensions[@]}"
+    fi
+
+    echo "✅ PHP $version_input installed."
+    if gum confirm "Set PHP $version_input as the active version now?"; then
+        switch_version "$version_input"
+    fi
+}
+
+switch_version() {
+    local target_version=${1:-} # Accept version as an argument
+    if [[ -z "$target_version" ]]; then
+        mapfile -t versions < <(list_installed_versions)
+        if [ ${#versions[@]} -eq 0 ]; then
+            echo "ℹ️ No PHP versions installed."; return;
+        fi
+        target_version=$(printf "%s\n" "${versions[@]}" | gum choose --header "Select PHP version to activate")
+        if [[ -z "$target_version" ]]; then return; fi
+    fi
+    
+    # ARCH MOD: Switch version by managing a symlink in a high-priority PATH location
+    local target_executable="/usr/bin/php${target_version//.}"
+    if [[ ! -f "$target_executable" ]]; then
+         target_executable="/usr/bin/php" # Fallback for main repo version
+    fi
+
+    echo "Switching active PHP version to $target_version..."
+    sudo ln -sf "$target_executable" /usr/local/bin/php
+    echo "✅ Active PHP version is now $(get_active_version)."
+    php -v
+}
+
+manage_extensions() {
+    local active_ver; active_ver=$(get_active_version)
+    if [[ "$active_ver" == "None" ]]; then echo "ℹ️ No active PHP version."; return; fi
+
+    while true; do
+        local choice; choice=$(gum choose "Install New Extension" "Edit php.ini to Toggle Extensions" "List Enabled Extensions" "Back")
+
+        case "$choice" in
+            "Install New Extension")
+                local search_term; search_term=$(gum input --placeholder "Search for extensions (e.g., gd, redis)")
+                if [[ -z "$search_term" ]]; then continue; fi
+                
+                # ARCH MOD: Search pacman repos
+                local pkg_to_install; pkg_to_install=$(pacman -Ssq "^php.*${search_term}.*" | gum filter --placeholder "Select package to install")
+                if [[ -z "$pkg_to_install" ]]; then continue; fi
+
+                if gum confirm "Install '$pkg_to_install'?"; then
+                    _install_php_packages "$pkg_to_install"
+                    echo "✅ Extension '$pkg_to_install' installed."
+                    echo "ℹ️ You may need to enable it in php.ini."
+                fi
+                ;;
+            "Edit php.ini to Toggle Extensions")
+                local ini_path="/etc/php/php.ini"
+                if [[ ! -f "$ini_path" ]]; then echo "❌ Could not find $ini_path"; continue; fi
+                echo "Opening $ini_path. Uncomment lines like ';extension=curl' to enable them."
+                gum countdown 3
+                nvim "$ini_path"
+                ;;
+            "List Enabled Extensions") php -m | gum pager ;;
+            "Back"|"") break ;;
+        esac
+    done
+}
+
+initial_setup() {
+    gum style --border normal --margin "1" --padding "1" "PHP & Composer Initial Setup (Arch Linux)"
+    if ! gum confirm "Proceed?"; then echo "Setup canceled."; exit 0; fi
+
+    # ARCH MOD: Install a default PHP version and common extensions from official repos
+    local php_version="php"
+    local extensions=("php-gd" "php-intl" "php-curl" "php-mysql" "php-sqlite" "php-bcmath")
+    echo "Installing the latest PHP, Composer, and common extensions from the official repositories..."
+    _install_php_packages "$php_version" "${extensions[@]}" "composer"
+
+    # Ensure /usr/local/bin is in PATH and has priority
+    if [[ ":$PATH:" != *":/usr/local/bin:"* ]]; then
+        echo "⚠️ WARNING: /usr/local/bin is not in your PATH. Version switching may not work."
+        echo "Please add 'export PATH=\"/usr/local/bin:\$PATH\"' to your ~/.bashrc or ~/.zshrc"
+    fi
+    # Set default link
+    sudo ln -sf /usr/bin/php /usr/local/bin/php
+
+    gum style --border double --margin "1" --padding "1" "🎉 Setup Complete! 🎉"
+    echo "Your environment is ready. Current versions:"
+    php -v; composer --version
+    exit 0
+}
+
+
+# --- SCRIPT ENTRYPOINT ---
+main_menu() {
+    # This function remains largely the same, just points to the Arch-modified functions
+    while true; do
+        local active_version; active_version=$(get_active_version)
+        local gum_header="PHP Manager (Arch) | Active: $active_version"
+        local main_choice
+        main_choice=$(gum choose \
+            "Initial Environment Setup" "Switch Active PHP Version" "Install PHP Version (Official/AUR)" \
+            "Manage Extensions (PHP $active_version)" "Exit")
+
+        case "$main_choice" in
+            "Initial Environment Setup") initial_setup ;;
+            "Switch Active PHP Version") switch_version ;;
+            "Install PHP Version (Official/AUR)") install_version ;;
+            "Manage Extensions (PHP $active_version)") manage_extensions ;;
+            "Exit"|"") echo "Goodbye!"; break ;;
+        esac
+    done
+}
+
+check_deps
+if [[ "${1:-}" == "--setup" ]]; then
+    initial_setup
+else
+    main_menu
+fi

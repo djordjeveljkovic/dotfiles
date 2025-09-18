@@ -6,7 +6,8 @@ local opt = vim.opt
 local g = vim.g
 
 -- opt.laststatus = 0                   -- Hide statusline
-g.netrw_banner = 0            -- remove the banner
+g.netrw_banner = 0 -- remove the banner
+g.netrw_keepdir = 1
 
 -- Line numbers
 opt.number = true         -- Show absolute line number
@@ -127,12 +128,12 @@ vim.api.nvim_create_autocmd("FileType", {
 
 -- if a file is a .env or .envrc file, set the filetype to sh
 vim.filetype.add({
-  filename = {
-    [".env"] = "sh",
-    [".envrc"] = "sh",
-    ["*.env"] = "sh",
-    ["*.envrc"] = "sh"
-  }
+    filename = {
+        [".env"] = "sh",
+        [".envrc"] = "sh",
+        ["*.env"] = "sh",
+        ["*.envrc"] = "sh"
+    }
 })
 -- ╭────────────────────────────────────────────────────────────────────────────╮
 -- │                             GENERAL AUTOCMDS                               │

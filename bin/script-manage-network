@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source ~/.dots/lib/helpers.sh
+check_deps
+
+# --- NETWORK OPERATIONS ---
+list_networks() {
+    podman network ls --format "{{.Name}}"
+}
+
+create_network() {
+    net_name=$(gum input --placeholder "Enter new network name")
+    if [[ -z "$net_name" ]]; then
+        echo "❌ Canceled." >&2; return 1;
+    fi
+    if resource_exists "network" "$net_name"; then
+        echo "❌ Network '$net_name' already exists." >&2; return 1;
+    fi
+    podman network create "$net_name"
+    echo "✅ Network '$net_name' created successfully." >&2
+    # Return the name for the selection function
+    echo "$net_name"
+}
+
+delete_network() {
+    if ! podman network ls | sed -n '2,$p' | grep -q .; then
+        echo "ℹ️ No custom networks to delete." >&2; return;
+    fi
+    net_name=$(list_networks | gum choose --header "Choose a network to delete")
+    if [[ -z "$net_name" ]]; then return; fi
+    if gum confirm "Delete network '$net_name'?"; then
+        podman network rm "$net_name"
+        echo "✅ Network '$net_name' deleted." >&2
+    fi
+}
+
+# --- SCRIPT MODES ---
+
+# Mode for being called by another script to select a network
+run_selection_mode() {
+    mapfile -t existing_networks < <(list_networks)
+    choices=("Host Network (direct access on LAN)" "Create a new network" "${existing_networks[@]}")
+    
+    net_choice=$(printf "%s\n" "${choices[@]}" | gum choose --header "Choose a network")
+    
+    # If user cancels, exit with empty output
+    if [[ -z "$net_choice" ]]; then exit 0; fi
+
+    case "$net_choice" in
+        "Host Network (direct access on LAN)")
+            echo "--network=host"
+            ;;
+        "Create a new network")
+            new_net_name=$(create_network)
+            if [[ -n "$new_net_name" ]]; then
+                echo "--network=$new_net_name"
+            fi
+            ;;
+        *)
+            echo "--network=$net_choice"
+            ;;
+    esac
+}
+
+# Mode for interactive management
+run_interactive_mode() {
+    while true; do
+        choice=$(gum choose "List Networks" "Create Network" "Delete Network" "Back")
+        case $choice in
+            "List Networks") list_networks | gum pager ;;
+            "Create Network") create_network >/dev/null ;; # Discard name output
+            "Delete Network") delete_network ;;
+            "Back"|"" ) break ;;
+        esac
+    done
+}
+
+# --- MAIN LOGIC ---
+if [[ "${1:-}" == "--select" ]]; then
+    run_selection_mode
+else
+    run_interactive_mode
+fi

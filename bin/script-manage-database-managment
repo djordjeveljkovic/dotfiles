@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source ~/.dots/lib/helpers.sh
+check_deps
+
+create_management_ui() {
+    local db_type="$1"
+    local admin_image="$2"
+    local env_var="$3"
+    local default_port="$4"
+    local admin_prefix="$5"
+
+    if ! podman ps --format "{{.Names}}" | grep -q .; then
+        echo "ℹ️ No running containers to attach to."
+        return
+    fi
+    
+    echo "Choose a running $db_type container to attach to:"
+    db_cname=$(list_running_containers | gum choose | cut -d' ' -f1)
+    if [[ -z "$db_cname" ]]; then return; fi
+
+    admin_cname="${admin_prefix}_${db_cname}"
+    if resource_exists "container" "$admin_cname"; then
+        echo "❌ Admin container '$admin_cname' already exists."
+        return 1
+    fi
+    
+    # Smartly find the network of the target DB container
+    db_network=$(podman inspect "$db_cname" --format '{{.HostConfig.NetworkMode}}')
+    if [[ -z "$db_network" ]]; then
+        echo "❌ Could not determine network for '$db_cname'."
+        return 1
+    fi
+    echo "ℹ️ Attaching to network '$db_network'..."
+
+    podman run -d --name "$admin_cname" --network="$db_network" \
+        -e "$env_var=$db_cname" -p "$default_port" "$admin_image"
+
+    echo "✅ Started $admin_cname, attached to '$db_cname' on network '$db_network'."
+}
+
+# --- MAIN LOOP ---
+while true; do
+    choice=$(gum choose "phpMyAdmin (MySQL)" "phpPgAdmin (PostgreSQL)" "Mongo Express" "Redis Commander" "Back")
+    case $choice in
+        "phpMyAdmin (MySQL)")
+            create_management_ui "MySQL/MariaDB" "docker.io/phpmyadmin:latest" "PMA_HOST" "8080:80" "pma"
+            ;;
+        "phpPgAdmin (PostgreSQL)")
+            create_management_ui "PostgreSQL" "docker.io/dockage/phppgadmin" "PHP_PG_ADMIN_SERVER_HOST" "8081:80" "pga"
+            ;;
+        "Mongo Express")
+            create_management_ui "MongoDB" "docker.io/library/mongo-express" "ME_CONFIG_MONGODB_SERVER" "8082:8081" "mexp"
+            ;;
+        "Redis Commander")
+            create_management_ui "Redis" "docker.io/rediscommander/redis-commander" "REDIS_HOSTS" "8083:8081" "rcmdr"
+            ;;
+        "Back"|"")
+            break
+            ;;
+    esac
+done

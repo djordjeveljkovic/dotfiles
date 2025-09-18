@@ -21,44 +21,19 @@ return {
                     nerd_font_variant = "normal",
                 },
                 sources = {
-                    -- per_filetype = {
-                    --     codecompanion = { "codecompanion" },
-                    -- },
-                    default = {  "lazydev", "lsp", "path", "snippets", "buffer" },
+                    default = { "lazydev", "lsp", "path", "snippets", "buffer" },
                     providers = {
                         lazydev = {
                             name = "LazyDev",
                             module = "lazydev.integrations.blink",
                             score_offset = 100,
                         },
-                        -- laravel = {
-                        --     name = "Laravel",
-                        --     module = "laravel.blink_source",
-                        --     enabled = function()
-                        --         return vim.bo.filetype == 'php' or vim.bo.filetype == 'blade'
-                        --     end,
-                        --     kind = "Laravel",
-                        --     score_offset = 1000, -- Highest priority
-                        --     min_keyword_length = 1,
-                        -- },
-                        -- laravel = {
-                        --     name = "laravel",
-                        --     module = "laravel.blink_source",
-                        -- },
-                        cmdline = {
-                            min_keyword_length = 2,
-                        },
                     },
                 },
                 keymap = {
-                    ["<C-f>"] = {},
-                },
-                cmdline = {
-                    enabled = false,
-                    completion = { menu = { auto_show = true } },
-                    keymap = {
-                        ["<CR>"] = { "accept_and_enter", "fallback" },
-                    },
+                    ["<CR>"] = { "accept", "fallback" },
+                    ["<Tab>"] = { "snippet_forward", "fallback" },
+                    ["<S-Tab>"] = { "snippet_backward", "fallback" },
                 },
                 completion = {
                     menu = {
@@ -85,6 +60,7 @@ return {
                     },
                 },
             })
+
             require("luasnip.loaders.from_vscode").lazy_load()
         end,
     },

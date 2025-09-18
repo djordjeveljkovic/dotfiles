@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+source ~/.dots/lib/helpers.sh
+check_deps
+
+# --- DATABASE OPERATIONS ---
+create_database() {
+    cname=$(gum input --placeholder "Enter container name")
+    if [[ -z "$cname" ]]; then return; fi
+    if resource_exists "container" "$cname"; then
+        echo "❌ Container '$cname' already exists."; return 1;
+    fi
+
+    db_type=$(gum choose "MySQL/MariaDB" "PostgreSQL" "MongoDB" "Redis")
+    if [[ -z "$db_type" ]]; then return; fi
+
+    # Call the network script to get the network flag
+    echo "Getting network choice..."
+    network_flag=$(script-manage-net.sh --select)
+    if [[ -z "$network_flag" ]]; then
+        echo "❌ Network selection canceled. Aborting DB creation."; return 1;
+    fi
+
+    # --- Podman Run Command Assembly ---
+    vname="$cname-data"
+    port_flags=""
+    run_cmd="podman run -d --name \"$cname\" $network_flag -v \"$vname:{{DATA_PATH}}\""
+    
+    case $db_type in
+        "MySQL/MariaDB")
+            image="docker.io/library/mariadb:latest"
+            run_cmd="${run_cmd/\{\{DATA_PATH\}\}/\/var\/lib\/mysql}"
+            run_cmd+=" -e MYSQL_ROOT_PASSWORD=root"
+            [[ "$network_flag" != "--network=host" ]] && port_flags="-p 3306:3306"
+            ;;
+        "PostgreSQL")
+            image="docker.io/library/postgres:latest"
+            run_cmd="${run_cmd/\{\{DATA_PATH\}\}/\/var\/lib\/postgresql\/data}"
+            run_cmd+=" -e POSTGRES_PASSWORD=root"
+            [[ "$network_flag" != "--network=host" ]] && port_flags="-p 5432:5432"
+            ;;
+        "MongoDB")
+            image="docker.io/library/mongo:latest"
+            run_cmd="${run_cmd/\{\{DATA_PATH\}\}/\/data\/db}"
+            [[ "$network_flag" != "--network=host" ]] && port_flags="-p 27017:27017"
+            ;;
+        "Redis")
+            image="docker.io/library/redis:latest"
+            run_cmd="${run_cmd/\{\{DATA_PATH\}\}/\/data}"
+            [[ "$network_flag" != "--network=host" ]] && port_flags="-p 6379:6379"
+            ;;
+    esac
+
+    final_cmd="$run_cmd $port_flags $image"
+    eval "$final_cmd"
+    echo "✅ Container '$cname' created with persistent volume '$vname'."
+}
+
+delete_database() {
+    cname="$1"
+    podman rm -f "$cname"
+}
+
+# --- MAIN LOOP ---
+while true; do
+    choice=$(gum choose "Create DB" "List DBs" "Delete DB" "Back")
+    case $choice in
+        "Create DB") create_database ;;
+        "List DBs") list_all_containers | gum pager ;;
+        "Delete DB") echo "Delete function to be implemented" ;; # Placeholder
+        "Back"|"") break ;;
+    esac
+done

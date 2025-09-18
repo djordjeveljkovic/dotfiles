@@ -6,8 +6,9 @@ require("config.lsp")
 require("config.mason-path")
 require("config.lazy")
 require("config.options")
-require("config.transperent")
 require("config.keymaps")
 require("config.terminal")
 
 vim.cmd.colorscheme("catppuccin")
+
+require("config.transperent")

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Source the helper to check for dependencies
+# Ensure this file exists: ~/.dots/lib/helpers.sh
+source ~/.dots/lib/helpers.sh
+check_deps
+
+SCRIPT_DIR="$HOME/.dots/bin"
+
+echo "Welcome to your Podman Management Hub!"
+
+while true; do
+    # Find all executable scripts matching the pattern
+    mapfile -t script_files < <(find "$SCRIPT_DIR" -type f -name "script-manage-*" -executable)
+
+    if [ ${#script_files[@]} -eq 0 ]; then
+        echo "No management scripts found in $SCRIPT_DIR"
+        echo "Please add scripts named 'script-manage-*' and make them executable."
+        exit 1
+    fi
+
+    # Create user-friendly names for the menu
+    declare -a choices
+    for file in "${script_files[@]}"; do
+        name=$(basename "$file" | sed -e 's/script-manage-//' -e 's/\.sh//')
+        choices+=("Manage ${name^}")
+    done
+    choices+=("Exit")
+
+    # Show the main menu
+    # MODIFIED: Added '|| true' to prevent script from exiting on cancel (ESC)
+    main_choice=$(printf "%s\n" "${choices[@]}" | gum choose --header "Select a management area" || true)
+
+    # This check now correctly handles both selecting "Exit" and cancelling the menu
+    if [[ "$main_choice" == "Exit" || -z "$main_choice" ]]; then
+        echo "Goodbye!"
+        break
+    fi
+
+    # Find the corresponding script file and execute it
+    for file in "${script_files[@]}"; do
+        name=$(basename "$file" | sed -e 's/script-manage-//' -e 's/\.sh//')
+        if [[ "$main_choice" == "Manage ${name^}" ]]; then
+            "$file"
+            break
+        fi
+    done
+done
