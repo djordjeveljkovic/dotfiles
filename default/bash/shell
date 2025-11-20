@@ -9,6 +9,4 @@ if [[ ! -v BASH_COMPLETION_VERSINFO && -f /usr/share/bash-completion/bash_comple
   source /usr/share/bash-completion/bash_completion
 fi
 
-# Set complete path
-export PATH="./bin:$HOME/.local/bin:$HOME/.dots/bin:$PATH"
 set +h

@@ -1,7 +1,27 @@
 # Editor used by CLI
 export EDITOR="nvim"
 export SUDO_EDITOR="$EDITOR"
-export PATH="$PATH:~/.config/composer/vendor/bin"
-export PATH="$PATH:~/usr/bin/zen"
-export PATH="$PATH:~/usr/bin"
-export DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
+
+# Android SDK
+export ANDROID_HOME="$HOME/Android/Sdk"
+
+# Docker/Podman
+export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+
+# User-local bin paths
+export PATH="$HOME/.local/bin:$HOME/.dots/bin:./bin:$PATH"
+
+# Go, Rust, Node, Composer, AI tools
+export PATH="$PATH:$HOME/go/bin"
+export PATH="$PATH:$HOME/.cargo/bin"
+export PATH="$PATH:$HOME/.npm-global/bin"
+export PATH="$PATH:$HOME/.config/composer/vendor/bin"
+export PATH="$PATH:$HOME/ai/llama.cpp/build/bin"
+export PATH="$PATH:$HOME/usr/bin"
+
+# Android SDK tools
+export PATH="$PATH:$ANDROID_HOME/platform-tools"
+export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin"
+
+# Flutter
+export PATH="/opt/flutter/bin:$PATH"

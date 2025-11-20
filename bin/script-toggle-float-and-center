@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# togglefloat-and-center.sh
-hyprctl dispatch togglefloating
-WINDOW=$(hyprctl activewindow | awk '{print $1}')
-hyprctl dispatch centerwindow activewindow
-

@@ -4,6 +4,5 @@ source ~/.dots/default/bash/aliases
 source ~/.dots/default/bash/functions
 source ~/.dots/default/bash/init
 source ~/.dots/default/bash/envs
-source ~/.dots/default/bash/flutter
 source ~/.dots/default/bash/music
 bind -f ~/.dots/default/bash/inputrc
