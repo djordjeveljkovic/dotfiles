@@ -1,0 +1,24 @@
+#!/bin/bash
+
+show_power_menu() {
+  local menu_options="  Lock
+󰤄  Suspend
+  Relaunch
+󰜉  Restart
+󰐥  Shutdown"
+
+  # fuzzel requires a simple list on stdin
+  local selection=$(printf "%s\n" "$menu_options" | \
+    fuzzel --dmenu --hide-prompt --lines 5 --width 14 --inner-pad 0  )
+
+  case "$selection" in
+    *Lock*) hyprlock ;;
+    *Suspend*) systemctl suspend ;;
+    *Relaunch*) uwsm stop ;;
+    *Restart*) systemctl reboot ;;
+    *Shutdown*) systemctl poweroff ;;
+  esac
+}
+
+# Call the function
+show_power_menu

@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+DIRECTION="$1" # next | prev
+
+current_id=$(hyprctl activeworkspace -j | jq '.id')
+
+mapfile -t workspaces < <(
+  hyprctl workspaces -j |
+  jq -r '.[] | select(.id > 0) | .id' |
+  sort -n
+)
+
+count=${#workspaces[@]}
+
+for i in "${!workspaces[@]}"; do
+  if [[ "${workspaces[$i]}" == "$current_id" ]]; then
+    if [[ "$DIRECTION" == "next" ]]; then
+      next_index=$(( (i + 1) % count ))
+    else
+      next_index=$(( (i - 1 + count) % count ))
+    fi
+
+    hyprctl dispatch workspace "${workspaces[$next_index]}"
+    exit 0
+  fi
+done

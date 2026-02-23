@@ -1,30 +1,63 @@
 #!/bin/bash
 
-# Designed to be run by systemd timer every 30 seconds and alerts if battery is low
+# Environment variables for notify-send to work via systemd
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DISPLAY=:0
 
-BATTERY_THRESHOLD=10
-NOTIFICATION_FLAG="/run/user/$UID/defo_battery_notified"
+# Thresholds (Must be ordered from High to Low)
+THRESHOLDS=(50 30 20 15 10)
 
+# Directory for tracking notifications
+FLAG_DIR="/run/user/$UID/battery_notify"
+mkdir -p "$FLAG_DIR"
+
+# 1. Get Battery Percentage (Strictly one number)
 get_battery_percentage() {
-  upower -i $(upower -e | grep 'BAT') | grep -E "percentage" | grep -o '[0-9]\+%' | sed 's/%//'
+    # We use head -n 1 to ensure we don't accidentally grab mouse/keyboard batteries
+    upower -i $(upower -e | grep 'BAT' | head -n 1) | \
+    grep -E "percentage" | \
+    grep -o '[0-9]\+%' | \
+    sed 's/%//'
 }
 
+# 2. Get Battery State
 get_battery_state() {
-  upower -i $(upower -e | grep 'BAT') | grep -E "state" | awk '{print $2}'
-}
-
-send_notification() {
-  notify-send -u critical "Battery Low" "Time to recharge! (battery is at ${1}%)" -i battery-caution
+    upower -i $(upower -e | grep 'BAT' | head -n 1) | \
+    grep -E "state" | \
+    awk '{print $2}'
 }
 
 BATTERY_LEVEL=$(get_battery_percentage)
 BATTERY_STATE=$(get_battery_state)
 
-if [[ "$BATTERY_STATE" == "discharging" && "$BATTERY_LEVEL" -le "$BATTERY_THRESHOLD" ]]; then
-  if [[ ! -f "$NOTIFICATION_FLAG" ]]; then
-    send_notification "$BATTERY_LEVEL"
-    touch "$NOTIFICATION_FLAG"
-  fi
-else
-  rm -f "$NOTIFICATION_FLAG"
+# Logic
+if [[ "$BATTERY_STATE" == "discharging" ]]; then
+    
+    for t in "${THRESHOLDS[@]}"; do
+        FLAG="$FLAG_DIR/threshold_$t"
+
+        # If battery is below threshold AND we haven't warned yet
+        if (( BATTERY_LEVEL <= t )) && [[ ! -f "$FLAG" ]]; then
+            
+            notify-send -u critical "Battery Low" "${BATTERY_LEVEL}% remaining" -i battery-caution
+            
+            # CRITICAL FIX: 
+            # Create flags for THIS threshold AND all higher thresholds.
+            # If we are at 9%, we effectively "passed" 50, 30, 20, and 15 already.
+            # This prevents 5 notifications from firing in a row.
+            for inner_t in "${THRESHOLDS[@]}"; do
+                if (( inner_t >= t )); then
+                    touch "$FLAG_DIR/threshold_$inner_t"
+                fi
+            done
+            
+            # Stop the loop so we don't process other thresholds in this run
+            break
+        fi
+    done
+
+elif [[ "$BATTERY_STATE" == "charging" || "$BATTERY_STATE" == "fully-charged" ]]; then
+    # Only clear flags if we are explicitly charging
+    # (Prevents clearing flags if state briefly flickers to "unknown")
+    rm -f "$FLAG_DIR"/threshold_*
 fi

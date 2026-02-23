@@ -1,0 +1,12 @@
+#!/bin/bash
+
+# Check if hyprsunset is already running
+pgrep -x hyprsunset >/dev/null 2>&1
+
+if [ $? -eq 0 ]; then
+    # If running, kill it (disable)
+    pkill hyprsunset
+else
+    # If not running, start it with desired settings
+    hyprsunset -g 50% -t 4000k &
+fi

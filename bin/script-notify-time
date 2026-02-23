@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# 1. Set environment variables so the background service can find your screen
+# This is crucial for notify-send to work from a service
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DISPLAY=:0
+
+# 2. Send the notification
+# %H:%M gives "14:30" format
+TIME_NOW=$(date +'%H:%M')
+notify-send -u low "Time Update $TIME_NOW" -i clock

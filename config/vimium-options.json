@@ -1,0 +1,278 @@
+{
+  "keyMappings": "# Insert your preferred key mappings here.\nmap z scrollDown\nunmap x\nmap x scrollUp\nmap a goPrevious\nmap s goNext\nunmap m\nmap m mute",
+  "settingsVersion": "2.3",
+  "exclusionRules": [
+    {
+      "passKeys": "",
+      "pattern": "https?://mail.google.com/*"
+    },
+    {
+      "passKeys": "gazxsrdaxa",
+      "pattern": "https?://learning.raf.edu.rs/*"
+    },
+    {
+      "passKeys": "asxzgrd",
+      "pattern": "https?://mcloud.to/*"
+    },
+    {
+      "passKeys": "azxsdfgr1234567890",
+      "pattern": "https?://anihdplay.com/*"
+    },
+    {
+      "passKeys": "asdzx;',./",
+      "pattern": "https?://vizcloud.co/*"
+    },
+    {
+      "passKeys": "axzsqdwec'.,;l/",
+      "pattern": "https?://kisskh.co/*"
+    },
+    {
+      "passKeys": "azxsdcqwert;'.,/zxcg",
+      "pattern": "https?://laracasts.com/*"
+    },
+    {
+      "passKeys": "fazxsdcfvqwer\\';/.,rtg",
+      "pattern": "https?://player.vimeo.com/*"
+    },
+    {
+      "passKeys": "azx'.,dgfrqwe",
+      "pattern": "https?://playtaku.net/*"
+    },
+    {
+      "passKeys": "axzsdqwerfxcv';,./,lmknngjb",
+      "pattern": "https?://rumble.com/*"
+    },
+    {
+      "passKeys": "axzxsdqwefsdvdfrhtrjhngymjukui .;p[",
+      "pattern": "https?://dokicloud.one/*"
+    },
+    {
+      "passKeys": "axzaswedwqwscxczvfrgertb",
+      "pattern": "https?://filemoon.sx/*"
+    },
+    {
+      "passKeys": "axaxzsqdefwcrevbr",
+      "pattern": "https?://playtaku.online/*"
+    },
+    {
+      "passKeys": "azxdgazxqsdwedcf",
+      "pattern": "https?://gotaku1.com/*"
+    },
+    {
+      "passKeys": "azxsdqwecvfrg",
+      "pattern": "https?://vidstream.pro/*"
+    },
+    {
+      "passKeys": "zxasqwedc'/.,f",
+      "pattern": "https?://rabbitstream.net/*"
+    },
+    {
+      "passKeys": "zxasdfgredf",
+      "pattern": "https?://youtube.googleapis.com/*"
+    },
+    {
+      "passKeys": "azxqwedsfgcv",
+      "pattern": "https?://www.dailymotion.com/*"
+    },
+    {
+      "passKeys": "axzqwdsefcvg",
+      "pattern": "https?://megacloud.tv/*"
+    },
+    {
+      "passKeys": "azxsd",
+      "pattern": "https?://kdramahood.com/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://www.openvim.com/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://infinityfest.rs:2083/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://www.twitch.tv/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://console.hetzner.cloud/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://goone.pro/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://watchseries.id/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://watchseries.id/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://vidplay.site/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://waaw.tv/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://gogoanimehd.io/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://southhemitv.com/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://vidplay.lol/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://vwv.dramacool9.com.ru/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://asianhd1.com/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://vidplay.online/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://www.apr.gov.rs/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://anitaku.to/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https://embtaku.pro/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://mcloud.bz/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://www.filmoviserije.net/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://watchseries.mx/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https://c8365730d4.nl/e//*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://anitaku.so/*"
+    },
+    {
+      "passKeys": "azxg'.,",
+      "pattern": "https?://watchseriesx.to/*"
+    },
+    {
+      "passKeys": "azxg",
+      "pattern": "https?://watch.sideplus.com/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://video.raf.edu.rs/*"
+    },
+    {
+      "passKeys": "axzgf'.,",
+      "pattern": "https?://anitaku.pe/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://wv2.dramacool.ba/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://watchseries.bar/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://anitaku.bz/*"
+    },
+    {
+      "passKeys": "azx'.,",
+      "pattern": "https?://cineb.rs/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://gogoanime.by/*"
+    },
+    {
+      "passKeys": "axz",
+      "pattern": "https?://vipserije.com/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://hianime.to/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://miro.com/*"
+    },
+    {
+      "passKeys": "azx,.;'",
+      "pattern": "https?://hianimez.to/*"
+    },
+    {
+      "passKeys": "azx,.'",
+      "pattern": "https?://kisskh.do/*"
+    },
+    {
+      "passKeys": "azx,.'",
+      "pattern": "https?://drive.google.com/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://onetouchtv.xyz/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://filmotip.com/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://luciferdonghua.in/*"
+    },
+    {
+      "passKeys": "aszxdg,.;'789456123r",
+      "pattern": "https?://www.youtube.com/*"
+    },
+    {
+      "passKeys": "azx,.'",
+      "pattern": "https?://ww4.fmovies.co/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://vidsrc.me/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://cineb.gg/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://netu.tv/*"
+    },
+    {
+      "passKeys": "azx",
+      "pattern": "https?://onlinesaprevodom.net/*"
+    },
+    {
+      "passKeys": "",
+      "pattern": "https?://hqq.to/*"
+    }
+  ]
+}

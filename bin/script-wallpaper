@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+WALLDIR="$HOME/Pictures/walls"
+TMPFILE="/tmp/yazi_selected_wallpaper"
+
+yazi "$WALLDIR" --chooser-file "$TMPFILE"
+
+if [[ ! -s "$TMPFILE" ]]; then
+    notify-send "No wallpaper selected."
+    exit 0
+fi
+
+WALL=$(cat "$TMPFILE")
+
+if [[ ! -f "$WALL" ]]; then
+    notify-send "Invalid file."
+    exit 1
+fi
+
+# Preload the actual wallpaper
+hyprctl hyprpaper preload "$WALL"
+
+# Apply to ALL monitors by using empty monitor name
+hyprctl hyprpaper wallpaper ",$WALL"
+
+notify-send "Wallpaper set" "$(basename "$WALL")"
+
+exit 0
