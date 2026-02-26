@@ -2,6 +2,7 @@
 export EDITOR="nvim"
 export SUDO_EDITOR="$EDITOR"
 
+export HYPRSHOT_DIR="$HOME/Pictures/screenshots/"
 # Android SDK
 export ANDROID_HOME="$HOME/Android/Sdk"
 

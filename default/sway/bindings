@@ -1,0 +1,175 @@
+# -----------------------------------------------------
+# Applications
+# -----------------------------------------------------
+bindsym $mod+b exec $browser
+bindsym $mod+Return exec $terminal
+bindsym $mod+g exec steam
+
+# Floating Terminal Apps
+bindsym $mod+e exec ghostty --class=com.x.FloatingWindow -e yazi
+bindsym $mod+t exec $terminal --class=com.x.FloatingWindow -e btop
+bindsym $mod+z exec $terminal --class=com.x.FloatingWindow -e impala
+bindsym $mod+x exec $terminal --class=com.x.FloatingWindow -e wiremix
+bindsym $mod+c exec $terminal --class=com.x.FloatingWindow -e bluetui
+bindsym $mod+Shift+c exec $terminal --class=com.x.FloatingWindow -e calcure
+bindsym $mod+grave exec $terminal --class=com.x.FloatingWindow -e ~/.dots/bin/script-manage
+bindsym $mod+p exec ghostty --class=com.x.FloatingWindow -e ~/.dots/bin/script-wallpaper
+bindsym $mod+d exec bash -c '$podman_as_docker $terminal --class=FloatingWindow -e lazydocker'
+
+# Web Apps & Tools
+bindsym $mod+a exec $webapp="https://chatgpt.com"
+bindsym $mod+Shift+a exec $webapp="https://gemini.google.com/u/0/app"
+bindsym $mod+Mod1+a exec /home/usrtmp/Downloads/antigravity/Antigravity/antigravity
+
+# -----------------------------------------------------
+# System & Aesthetics
+# -----------------------------------------------------
+bindsym $mod+space exec fuzzel --lines 5
+bindsym $mod+Shift+space exec pkill -SIGUSR1 waybar
+bindsym $mod+Escape exec ~/.dots/bin/script-power
+bindsym $mod+n exec ~/.dots/bin/script-toggle-sunset
+
+# Scripts & Info
+bindsym $mod+Control+i exec ~/.dots/bin/script-toggle-idle
+bindsym $mod+i exec ~/.dots/bin/script-info
+bindsym $mod+Shift+p exec ~/.dots/bin/script-monitors-pick
+bindsym $mod+v exec "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"
+
+# Notifications (Mako)
+bindsym $mod+comma exec makoctl dismiss
+bindsym $mod+Shift+comma exec makoctl dismiss --all
+bindsym $mod+Control+comma exec "makoctl mode -t do-not-disturb && (makoctl mode | grep -q 'do-not-disturb' && notify-send 'Silenced notifications' || notify-send 'Enabled notifications')"
+
+# -----------------------------------------------------
+# Media & Hardware
+# -----------------------------------------------------
+
+# Volume & Mic
+bindsym XF86AudioRaiseVolume exec swayosd-client --output-volume=+5
+bindsym XF86AudioLowerVolume exec swayosd-client --output-volume=-5
+bindsym XF86AudioMute exec swayosd-client --output-volume=mute-toggle
+bindsym XF86AudioMicMute exec swayosd-client --input-volume=mute-toggle
+
+# Brightness
+bindsym XF86MonBrightnessUp exec swayosd-client --brightness raise
+bindsym XF86MonBrightnessDown exec swayosd-client --brightness lower 
+
+# Player Controls
+bindsym XF86AudioNext exec swayosd-client --playerctl=next
+bindsym XF86AudioPrev exec swayosd-client --playerctl=prev
+bindsym XF86AudioPlay exec swayosd-client --playerctl=play-pause
+bindsym XF86AudioPause exec swayosd-client --playerctl=play-pause
+
+# Keyboard Layout
+bindsym Mod1+Shift_L exec "swaymsg input type:keyboard xkb_switch_layout next && swayosd-client --custom-message \"$(swaymsg -t get_inputs | jq -r '.[] | select(.type == \"keyboard\") | .xkb_active_layout_name')\" --custom-icon preferences-desktop-keyboard"
+
+# -----------------------------------------------------
+# Screenshots & Color Picker
+# -----------------------------------------------------
+bindsym Print exec hyprshot -m region
+bindsym Shift+Print exec hyprshot -m window
+bindsym Control+Print exec hyprshot -m output
+bindsym $mod+s exec hyprshot -m region
+bindsym $mod+Shift+s exec hyprshot -m window
+bindsym $mod+Control+s exec hyprshot -m output
+bindsym $mod+Print exec hyprpicker -a
+bindsym $mod+Mod1+s exec hyprpicker -a
+
+# -----------------------------------------------------
+# Window Management & Tiling
+# -----------------------------------------------------
+bindsym $mod+w kill
+bindsym $mod+f floating toggle
+bindsym $mod+o split toggle
+
+# Focus Movement
+bindsym $mod+Left focus left
+bindsym $mod+Right focus right
+bindsym $mod+Up focus up
+bindsym $mod+Down focus down
+bindsym $mod+h focus left
+bindsym $mod+l focus right
+bindsym $mod+k focus up
+bindsym $mod+j focus down
+
+# Swap Windows
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Right move right
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+l move right
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+j move down
+
+# Tab Cycling
+bindsym Mod1+Tab focus next
+
+# -----------------------------------------------------
+# Workspaces
+# -----------------------------------------------------
+
+# Switch Workspaces
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
+
+# Move Window to Workspace
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
+
+# Workspace Cycling
+bindsym $mod+button4 exec ~/.dots/bin/workspace-cycle next
+bindsym $mod+button5 exec ~/.dots/bin/workspace-cycle prev
+bindsym $mod+Tab exec ~/.dots/bin/workspace-cycle next
+bindsym $mod+Shift+Tab exec ~/.dots/bin/workspace-cycle prev
+
+# Drag floating windows by holding down $mod and left mouse button.
+# Resize them with right mouse button + $mod.
+floating_modifier $mod normal
+
+# -----------------------------------------------------
+# Submap: MOVE_RESIZE
+# -----------------------------------------------------
+bindsym $mod+r mode "MOVE_RESIZE"
+
+mode "MOVE_RESIZE" {
+    bindsym f fullscreen toggle
+    
+    # Move
+    bindsym h move left 20 px
+    bindsym l move right 20 px
+    bindsym k move up 20 px
+    bindsym j move down 20 px
+
+    # Resize (ALT -> Mod1)
+    bindsym Mod1+h resize shrink width 20 px
+    bindsym Mod1+l resize grow width 20 px
+    bindsym Mod1+k resize shrink height 20 px
+    bindsym Mod1+j resize grow height 20 px
+
+    # Combined Move/Resize (SHIFT)
+    bindsym Shift+h move left 20 px; resize grow width 20 px
+    bindsym Shift+l move right 20 px; resize shrink width 20 px
+    bindsym Shift+k move up 20 px; resize grow height 20 px
+    bindsym Shift+j move down 20 px; resize shrink height 20 px
+
+    # Exit Mode
+    bindsym Escape mode "default"
+}
+

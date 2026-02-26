@@ -1,0 +1,15 @@
+# -----------------------------------------------------
+# Autostart
+# -----------------------------------------------------
+exec --no-startup-id autotiling
+exec swayidle -w \
+    timeout 300 'swaylock -f -c 000000' \
+    timeout 330 'swaymsg "output * dpms off"' \
+    resume 'swaymsg "output * dpms on"' \
+    before-sleep 'swaylock -f -c 000000' &
+exec mako &
+exec swayosd-server &
+exec swaybg -i ~/.dots/background -m fill &
+
+exec wl-paste --type text --watch cliphist store
+exec wl-paste --type image --watch cliphist store

@@ -1,0 +1,25 @@
+# -----------------------------------------------------
+# Input Devices
+# -----------------------------------------------------
+
+input type:keyboard {
+    xkb_layout us,rs,rs
+    xkb_variant ,latin,
+    xkb_options ctrl:nocaps,altwin:menu_win
+    repeat_rate 40
+    repeat_delay 600
+}
+
+input type:pointer {
+    pointer_accel 0
+}
+
+input type:touchpad {
+    natural_scroll enabled
+    tap enabled
+    click_method clickfinger
+    pointer_accel 0.4
+}
+
+# Workspace back and forth
+workspace_auto_back_and_forth yes

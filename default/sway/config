@@ -1,0 +1,22 @@
+# -----------------------------------------------------
+# Sway Configuration
+# -----------------------------------------------------
+
+set $mod Mod1
+
+# Variables
+set $terminal alacritty
+set $browser google-chrome-stable
+set $webapp $browser --app
+set $podman_as_docker DOCKER_HOST=unix:///run/user/$(id -u)/podman/podman.sock
+
+# Includes
+include looknfeel
+include input
+include bindings
+include media
+include windows
+include autostart
+
+# Monitors
+include monitors/*

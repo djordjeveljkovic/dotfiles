@@ -1,0 +1,28 @@
+# --- Global ---
+# (Sway handles most maximized app logic internally)
+
+# --- Floating & Centering ---
+for_window [app_id=".*FloatingWindow"] floating enable, move position center, resize set width 75 ppt height 75 ppt
+for_window [class=".*FloatingWindow"] floating enable, move position center, resize set width 75 ppt height 75 ppt
+
+for_window [app_id="xdg-desktop-portal-gtk" title="^(Open.*Files?|Save.*Files?|All Files|Save)"] floating enable, move position center, resize set width 1200 height 800
+for_window [class="xdg-desktop-portal-gtk" title="^(Open.*Files?|Save.*Files?|All Files|Save)"] floating enable, move position center, resize set width 1200 height 800
+
+for_window [title="^(System Monitor|Monitor Manager)$"] floating enable, move position center, resize set width 519 height 439
+
+# --- Opacity Rules ---
+# Sway standard does not support window opacity out of the box. 
+# It requires SwayFX. We define standard SwayFX opacity rules here:
+# (These will be silently ignored if using standard Sway)
+for_window [class=".*"] opacity 0.95
+for_window [app_id=".*"] opacity 0.95
+
+for_window [app_id="^(zoom|vlc|mpv|imv|jetbrains-phpstorm)$"] opacity 1.0
+for_window [class="^(zoom|vlc|mpv|imv|jetbrains-phpstorm)$"] opacity 1.0
+
+for_window [app_id="^(firefox|google-chrome-stable|google-chrome)$"] opacity 0.97
+for_window [class="^(firefox|google-chrome-stable|google-chrome)$"] opacity 0.97
+
+# --- Screen Sharing Fix ---
+# Sway also shows the sharing indicator sometimes. Let's move it to scratchpad or offscreen.
+for_window [title="^(.*is sharing your screen.*)$"] move scratchpad

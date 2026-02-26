@@ -1,0 +1,2 @@
+include ~/.dots/default/sway/config
+include ~/.dots/current/theme/sway.conf*

@@ -23,6 +23,8 @@ hyprctl hyprpaper preload "$WALL"
 # Apply to ALL monitors by using empty monitor name
 hyprctl hyprpaper wallpaper ",$WALL"
 
+cp $WALL ~/.dots/background
+
 notify-send "Wallpaper set" "$(basename "$WALL")"
 
 exit 0

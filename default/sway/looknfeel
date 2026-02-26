@@ -1,0 +1,17 @@
+# -----------------------------------------------------
+# Look and Feel
+# -----------------------------------------------------
+
+gaps inner 0
+gaps outer 0
+default_border pixel 0
+smart_borders on
+smart_gaps on
+
+# Note: Blur and animations are not supported in standard sway.
+# For swayfx they are configured separately.
+# swayfx configuration:
+# blur enable
+# blur_passes 4
+# blur_radius 5
+# default_dim_inactive 0.0

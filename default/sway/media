@@ -1,0 +1,24 @@
+# --------------------------------------------------------
+#          DEDICATED MEDIA WORKSPACE CONFIG
+# --------------------------------------------------------
+
+# 1. WORKSPACE DEFINITION
+# In Sway, auto-launching on workspace creation is handled by assigning
+# applications to workspaces and launching them during startup, or dynamically via scripting.
+# For simplicity, we just bind the workspaces here.
+
+assign [app_id="youtube-tui"] youtube
+assign [class="mpv"] youtube
+
+assign [app_id="youtube-tui"] music
+assign [class="mpv"] music
+
+for_window [app_id="youtube-tui" workspace="youtube"] fullscreen enable
+for_window [class="mpv" workspace="youtube"] fullscreen enable
+
+for_window [app_id="youtube-tui" workspace="music"] fullscreen enable
+for_window [class="mpv" workspace="music"] fullscreen enable
+
+# --- Keybinds for Custom Media Workspaces ---
+bindsym $mod+y workspace youtube
+bindsym $mod+m workspace music
