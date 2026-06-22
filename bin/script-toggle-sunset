@@ -1,12 +1,14 @@
 #!/bin/bash
 
-# Check if hyprsunset is already running
-pgrep -x hyprsunset >/dev/null 2>&1
+# Toggle night light via wlsunset (lighter than gammastep: tiny C daemon,
+# wlr-gamma-control only, no geolocation/Python deps).
+# -T 4000  -> night temperature in Kelvin
+# -g 0.5   -> gamma multiplier (0.5 = 50% dim)
 
-if [ $? -eq 0 ]; then
-    # If running, kill it (disable)
-    pkill hyprsunset
+if pgrep -x wlsunset >/dev/null 2>&1; then
+    pkill wlsunset
+    notify-send "Night light" "Off"
 else
-    # If not running, start it with desired settings
-    hyprsunset -g 50% -t 4000k &
+    wlsunset -T 4000 -g 0.5 &
+    notify-send "Night light" "On (4000K, 50%)"
 fi

@@ -2,7 +2,6 @@
 
 # Cursor size
 export XCURSOR_SIZE=24
-export HYPRCURSOR_SIZE=24
 
 # Force all apps to use Wayland
 export GDK_BACKEND=wayland,x11,*

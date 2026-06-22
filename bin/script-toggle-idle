@@ -1,9 +1,21 @@
 #!/usr/bin/env bash
 
-if pgrep -x hypridle > /dev/null; then
-  pkill -x hypridle
-  notify-send "Stop locking computer when idle"
+# Toggle swayidle (the idle/lock daemon launched by sway autostart).
+# Killing it disables auto-lock + auto-dpms; restarting it re-enables them.
+
+# Mirror the timeouts defined in default/sway/autostart
+IDLE_CMD=(
+  swayidle -w
+  timeout 300 'swaylock -f -c 000000'
+  timeout 330 'swaymsg "output * dpms off"'
+  resume      'swaymsg "output * dpms on"'
+  before-sleep 'swaylock -f -c 000000'
+)
+
+if pgrep -x swayidle >/dev/null; then
+  pkill -x swayidle
+  notify-send "Idle lock" "Disabled"
 else
-  setsid hypridle &> /dev/null &
-  notify-send "Now locking computer when idle"
+  setsid "${IDLE_CMD[@]}" >/dev/null 2>&1 &
+  notify-send "Idle lock" "Enabled"
 fi

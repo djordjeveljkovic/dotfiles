@@ -1,7 +1,11 @@
 # -----------------------------------------------------
 # Autostart
 # -----------------------------------------------------
+# Export session env so systemd user services and xdg-desktop-portal work
+exec --no-startup-id dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway
+
 exec --no-startup-id autotiling
+exec --no-startup-id kanshi >/dev/null 2>&1
 exec swayidle -w \
     timeout 300 'swaylock -f -c 000000' \
     timeout 330 'swaymsg "output * dpms off"' \

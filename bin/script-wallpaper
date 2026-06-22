@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
 WALLDIR="$HOME/Pictures/walls"
 TMPFILE="/tmp/yazi_selected_wallpaper"
@@ -17,14 +18,13 @@ if [[ ! -f "$WALL" ]]; then
     exit 1
 fi
 
-# Preload the actual wallpaper
-hyprctl hyprpaper preload "$WALL"
+# Kill any prior swaybg so we don't stack instances
+pkill swaybg 2>/dev/null || true
 
-# Apply to ALL monitors by using empty monitor name
-hyprctl hyprpaper wallpaper ",$WALL"
+# Apply to all outputs via swaymsg (sway-native, no separate daemon)
+swaymsg "output * bg '$WALL' fill"
 
-cp $WALL ~/.dots/background
+# Persist as the default background so the next boot keeps it
+cp "$WALL" "$HOME/.dots/background"
 
 notify-send "Wallpaper set" "$(basename "$WALL")"
-
-exit 0

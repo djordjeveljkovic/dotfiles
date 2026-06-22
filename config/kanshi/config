@@ -1,0 +1,24 @@
+# kanshi — declarative output management for sway
+# Replaces the old script-monitor-display / script-monitors-pick / script-monitors-parse trio.
+# Docs: https://gitlab.freedesktop.org/emersion/kanshi
+#
+# kanshi auto-applies the first profile whose outputs match what's connected.
+# Reload at runtime: `kanshictl reload`
+
+# Default: enable every connected output at its preferred mode, side by side.
+profile {
+    output "*" enable mode preferred position auto
+}
+
+# --- Laptop docked to one external HDMI (mirror of the old hypr layout) ---
+# Uncomment and adjust names (`swaymsg -t get_outputs`) when you know them.
+#
+# profile docked {
+#     output eDP-1 disable
+#     output HDMI-A-1 enable mode 1920x1080@60Hz position 0,0
+# }
+#
+# profile laptop-and-hdmi {
+#     output eDP-1 enable mode 1920x1200@60Hz position -1920,0
+#     output HDMI-A-1 enable mode 1920x1080@60Hz position 0,0
+# }

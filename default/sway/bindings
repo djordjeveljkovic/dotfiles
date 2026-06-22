@@ -5,21 +5,22 @@ bindsym $mod+b exec $browser
 bindsym $mod+Return exec $terminal
 bindsym $mod+g exec steam
 
-# Floating Terminal Apps
-bindsym $mod+e exec ghostty --class=com.x.FloatingWindow -e yazi
+# Floating Terminal Apps (alacritty-only; ghostty dropped)
+bindsym $mod+e exec $terminal --class=com.x.FloatingWindow -e yazi
 bindsym $mod+t exec $terminal --class=com.x.FloatingWindow -e btop
 bindsym $mod+z exec $terminal --class=com.x.FloatingWindow -e impala
 bindsym $mod+x exec $terminal --class=com.x.FloatingWindow -e wiremix
 bindsym $mod+c exec $terminal --class=com.x.FloatingWindow -e bluetui
 bindsym $mod+Shift+c exec $terminal --class=com.x.FloatingWindow -e calcure
 bindsym $mod+grave exec $terminal --class=com.x.FloatingWindow -e ~/.dots/bin/script-manage
-bindsym $mod+p exec ghostty --class=com.x.FloatingWindow -e ~/.dots/bin/script-wallpaper
+bindsym $mod+p exec $terminal --class=com.x.FloatingWindow -e ~/.dots/bin/script-wallpaper
 bindsym $mod+d exec bash -c '$podman_as_docker $terminal --class=FloatingWindow -e lazydocker'
 
 # Web Apps & Tools
 bindsym $mod+a exec $webapp="https://chatgpt.com"
 bindsym $mod+Shift+a exec $webapp="https://gemini.google.com/u/0/app"
-# bindsym $mod+Mod1+a exec /home/usrtmp/Downloads/antigravity/Antigravity/antigravity
+# Antigravity is opt-in (--antigravity flag). Bind only if installed:
+# bindsym $mod+Mod1+a exec $HOME/Downloads/antigravity/Antigravity/antigravity
 
 # -----------------------------------------------------
 # System & Aesthetics
@@ -31,8 +32,8 @@ bindsym $mod+n exec ~/.dots/bin/script-toggle-sunset
 
 # Scripts & Info
 bindsym $mod+Control+i exec ~/.dots/bin/script-toggle-idle
-bindsym $mod+i exec ~/.dots/bin/script-info
-bindsym $mod+Shift+p exec ~/.dots/bin/script-monitors-pick
+bindsym $mod+i exec $terminal --class=com.x.FloatingWindow -e fastfetch
+bindsym $mod+Shift+p exec ~/.dots/bin/script-show-keybindings
 bindsym $mod+v exec "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"
 
 # Notifications (Mako)
@@ -64,16 +65,16 @@ bindsym XF86AudioPause exec swayosd-client --playerctl=play-pause
 bindsym Mod1+Shift_L exec "swaymsg input type:keyboard xkb_switch_layout next && swayosd-client --custom-message \"$(swaymsg -t get_inputs | jq -r '.[] | select(.type == \"keyboard\") | .xkb_active_layout_name')\" --custom-icon preferences-desktop-keyboard"
 
 # -----------------------------------------------------
-# Screenshots & Color Picker
+# Screenshots (grim + slurp + wl-copy) and Color Picker
 # -----------------------------------------------------
-# bindsym Print exec hyprshot -m region
-# bindsym Shift+Print exec hyprshot -m window
-# bindsym Control+Print exec hyprshot -m output
-# bindsym $mod+s exec hyprshot -m region
-# bindsym $mod+Shift+s exec hyprshot -m window
-# bindsym $mod+Control+s exec hyprshot -m output
-# bindsym $mod+Print exec hyprpicker -a
-# bindsym $mod+Mod1+s exec hyprpicker -a
+# Region screenshot -> copy to clipboard
+bindsym Print exec grim -g "$(slurp)" - | wl-copy
+# Full output screenshot -> save file
+bindsym Shift+Print exec grim - | wl-copy
+# Region screenshot (mod variant) -> save to Pictures
+bindsym $mod+s exec grim -g "$(slurp)" "$HOME/Pictures/screenshots/$(date +%Y%m%d-%H%M%S).png"
+# Color picker -> copy hex to clipboard
+bindsym $mod+Shift+s exec grim -g "$(slurp -p)" - | magick - -format "%[pixel:p{0,0}]" txt: | tail -1 | grep -o '#[0-9A-Fa-f]\{6\}' | wl-copy
 
 # -----------------------------------------------------
 # Window Management & Tiling
@@ -102,8 +103,13 @@ bindsym $mod+Shift+l move right
 bindsym $mod+Shift+k move up
 bindsym $mod+Shift+j move down
 
-# Tab Cycling
+# Tab / Workspace Cycling (sway-native; no helper script)
 bindsym Mod1+Tab focus next
+bindsym $mod+Tab workspace next_on_output
+bindsym $mod+Shift+Tab workspace prev_on_output
+bindsym $mod+button4 workspace next_on_output
+bindsym $mod+button5 workspace prev_on_output
+bindsym $mod+slash workspace back_and_forth
 
 # -----------------------------------------------------
 # Workspaces
@@ -132,12 +138,6 @@ bindsym $mod+Shift+7 move container to workspace number 7
 bindsym $mod+Shift+8 move container to workspace number 8
 bindsym $mod+Shift+9 move container to workspace number 9
 bindsym $mod+Shift+0 move container to workspace number 10
-
-# Workspace Cycling
-# bindsym $mod+button4 exec ~/.dots/bin/workspace-cycle next
-# bindsym $mod+button5 exec ~/.dots/bin/workspace-cycle prev
-# bindsym $mod+Tab exec ~/.dots/bin/workspace-cycle next
-# bindsym $mod+Shift+Tab exec ~/.dots/bin/workspace-cycle prev
 
 # Drag floating windows by holding down $mod and left mouse button.
 # Resize them with right mouse button + $mod.
