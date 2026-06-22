@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
+paru -S --noconfirm --needed nvim luarocks tree-sitter-cli cmake npm go ripgrep shellcheck
 
-paru -S --noconfirm --needed nvim luarocks tree-sitter-cli cmake luarocks npm go sed ripgrep composer shellcheck 
-
-rm -rf ~/.config/nvim
-cp -r ~/.dots/config/nvim ~/.config/
+# Symlink so edits flow back to the repo (replaces the old cp -r)
+ln -sfn ~/.dots/config/nvim ~/.config/nvim

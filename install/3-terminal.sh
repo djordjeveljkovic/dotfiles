@@ -3,4 +3,5 @@ paru -S --noconfirm --needed \
   curl wget iputils openssh nmap whois \
   fd eza fzf ripgrep zoxide bat \
   wl-clipboard plocate bash-completion less man tldr \
-  fastfetch alacritty
+  fastfetch alacritty \
+  ttf-firacode-nerd

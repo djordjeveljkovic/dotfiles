@@ -34,11 +34,9 @@ done
 echo "🖥️ Creating Alacritty-based .desktop launchers for your TUIs..."
 
 # 🧠 Add your terminal apps below 👇
+# Trimmed to what the installer actually ships (btop, tig).
 declare -A tui_apps=(
-    [htop]="System monitor"
-    [neomutt]="Email client"
-    [taskwarrior]="Task manager"
-    [ncmpcpp]="Music player"
+    [btop]="System monitor"
     [tig]="Git UI"
 )
 
