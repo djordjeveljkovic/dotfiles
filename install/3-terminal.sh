@@ -1,4 +1,4 @@
-yay -S --noconfirm --needed \
+paru -S --noconfirm --needed \
   unzip p7zip zip impala \
   curl wget iputils openssh nmap whois \
   fd eza fzf ripgrep zoxide bat \

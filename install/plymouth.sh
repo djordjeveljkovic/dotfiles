@@ -11,7 +11,7 @@ timestamp=$(date +"%Y%m%d%H%M%S")
 
 # Install plymouth if not present
 if [[ -z $(command -v plymouth) ]]; then
-    yay -S --noconfirm --needed plymouth
+    paru -S --noconfirm --needed plymouth
 fi
 
 echo "🔧 Configuring Plymouth..."

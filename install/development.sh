@@ -1,4 +1,4 @@
-yay -S --noconfirm --needed \
+paru -S --noconfirm --needed \
   rustup clang llvm mise \
   imagemagick jq \
   mariadb-libs postgresql-libs \

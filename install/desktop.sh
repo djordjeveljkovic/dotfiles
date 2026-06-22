@@ -1,4 +1,4 @@
-yay -S --noconfirm --needed \
+paru -S --noconfirm --needed \
   brightnessctl playerctl wiremix wireplumber \
   wl-clip-persist wl-clipboard cliphist \
   mpv imv \

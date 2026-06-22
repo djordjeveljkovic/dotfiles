@@ -1,5 +1,5 @@
 # Install bluetooth controls
-yay -S --noconfirm --needed bluetui
+paru -S --noconfirm --needed bluetui
 
 # Turn on bluetooth by default
 sudo systemctl enable --now bluetooth.service

@@ -3,8 +3,8 @@ set -euo pipefail
 
 # --- PRE-FLIGHT CHECKS ---
 check_deps() {
-    # ARCH MOD: Check for pacman instead of apt. yay is for AUR packages.
-    for cmd in gum nvim pacman sudo yay; do
+    # ARCH MOD: Check for pacman instead of apt. paru is for AUR packages.
+    for cmd in gum nvim pacman sudo paru; do
         if ! command -v "$cmd" &>/dev/null; then
             echo "❌ Error: Required command '$cmd' is not installed. Please install it to continue."
             exit 1
@@ -38,8 +38,8 @@ _install_php_packages() {
 _install_aur_package() {
     local package="$1"
     echo "Installing '$package' from the AUR..."
-    gum spin --spinner dot --title "Running yay -S..." -- \
-        yay -S --noconfirm --needed "$package"
+    gum spin --spinner dot --title "Running paru -S..." -- \
+        paru -S --noconfirm --needed "$package"
 }
 
 # --- CORE FEATURES ---
