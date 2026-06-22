@@ -6,6 +6,9 @@ export HYPRSHOT_DIR="$HOME/Pictures/screenshots/"
 # Android SDK
 export ANDROID_HOME="$HOME/Android/Sdk"
 
+# Add to your shell config
+export OPENROUTER_API_KEY="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"
+
 # Docker/Podman
 export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
 
@@ -19,6 +22,7 @@ export PATH="$PATH:$HOME/.npm-global/bin"
 export PATH="$PATH:$HOME/.config/composer/vendor/bin"
 export PATH="$PATH:$HOME/ai/llama.cpp/build/bin"
 export PATH="$PATH:$HOME/usr/bin"
+export PATH="$PATH:$HOME/.cache/.bun/bin"
 
 # Android SDK tools
 export PATH="$PATH:$ANDROID_HOME/platform-tools"
