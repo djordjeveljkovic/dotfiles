@@ -19,7 +19,7 @@ bindsym $mod+d exec bash -c '$podman_as_docker $terminal --class=FloatingWindow 
 # Web Apps & Tools
 bindsym $mod+a exec $webapp="https://chatgpt.com"
 bindsym $mod+Shift+a exec $webapp="https://gemini.google.com/u/0/app"
-bindsym $mod+Mod1+a exec /home/usrtmp/Downloads/antigravity/Antigravity/antigravity
+# bindsym $mod+Mod1+a exec /home/usrtmp/Downloads/antigravity/Antigravity/antigravity
 
 # -----------------------------------------------------
 # System & Aesthetics
@@ -66,14 +66,14 @@ bindsym Mod1+Shift_L exec "swaymsg input type:keyboard xkb_switch_layout next &&
 # -----------------------------------------------------
 # Screenshots & Color Picker
 # -----------------------------------------------------
-bindsym Print exec hyprshot -m region
-bindsym Shift+Print exec hyprshot -m window
-bindsym Control+Print exec hyprshot -m output
-bindsym $mod+s exec hyprshot -m region
-bindsym $mod+Shift+s exec hyprshot -m window
-bindsym $mod+Control+s exec hyprshot -m output
-bindsym $mod+Print exec hyprpicker -a
-bindsym $mod+Mod1+s exec hyprpicker -a
+# bindsym Print exec hyprshot -m region
+# bindsym Shift+Print exec hyprshot -m window
+# bindsym Control+Print exec hyprshot -m output
+# bindsym $mod+s exec hyprshot -m region
+# bindsym $mod+Shift+s exec hyprshot -m window
+# bindsym $mod+Control+s exec hyprshot -m output
+# bindsym $mod+Print exec hyprpicker -a
+# bindsym $mod+Mod1+s exec hyprpicker -a
 
 # -----------------------------------------------------
 # Window Management & Tiling
@@ -134,10 +134,10 @@ bindsym $mod+Shift+9 move container to workspace number 9
 bindsym $mod+Shift+0 move container to workspace number 10
 
 # Workspace Cycling
-bindsym $mod+button4 exec ~/.dots/bin/workspace-cycle next
-bindsym $mod+button5 exec ~/.dots/bin/workspace-cycle prev
-bindsym $mod+Tab exec ~/.dots/bin/workspace-cycle next
-bindsym $mod+Shift+Tab exec ~/.dots/bin/workspace-cycle prev
+# bindsym $mod+button4 exec ~/.dots/bin/workspace-cycle next
+# bindsym $mod+button5 exec ~/.dots/bin/workspace-cycle prev
+# bindsym $mod+Tab exec ~/.dots/bin/workspace-cycle next
+# bindsym $mod+Shift+Tab exec ~/.dots/bin/workspace-cycle prev
 
 # Drag floating windows by holding down $mod and left mouse button.
 # Resize them with right mouse button + $mod.
