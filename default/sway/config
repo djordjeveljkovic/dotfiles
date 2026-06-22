@@ -18,5 +18,5 @@ include media
 include windows
 include autostart
 
-# Monitors
-include monitors/*
+# Monitors: managed by kanshi (see config/kanshi/config). Sway auto-detects
+# outputs at preferred mode until kanshi applies a profile.

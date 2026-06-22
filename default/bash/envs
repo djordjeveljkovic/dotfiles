@@ -2,27 +2,31 @@
 export EDITOR="nvim"
 export SUDO_EDITOR="$EDITOR"
 
-export HYPRSHOT_DIR="$HOME/Pictures/screenshots/"
-# Android SDK
-export ANDROID_HOME="$HOME/Android/Sdk"
-
-# Docker/Podman
+# Docker/Podman (rootless socket — see install/podman.sh)
 export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
+
+# Screenshots saved by sway bindings (grim)
+export SCREENSHOT_DIR="$HOME/Pictures/screenshots/"
+mkdir -p "$SCREENSHOT_DIR" 2>/dev/null
 
 # User-local bin paths
 export PATH="$HOME/.local/bin:$HOME/.dots/bin:./bin:$PATH"
 
-# Go, Rust, Node, Composer, AI tools
+# Language toolchains
 export PATH="$PATH:$HOME/go/bin"
 export PATH="$PATH:$HOME/.cargo/bin"
 export PATH="$PATH:$HOME/.npm-global/bin"
-export PATH="$PATH:$HOME/.config/composer/vendor/bin"
-export PATH="$PATH:$HOME/ai/llama.cpp/build/bin"
-export PATH="$PATH:$HOME/usr/bin"
 
-# Android SDK tools
-export PATH="$PATH:$ANDROID_HOME/platform-tools"
-export PATH="$PATH:$ANDROID_HOME/cmdline-tools/latest/bin"
+# --- Opt-in env fragments (written by install/opt-*.sh) ---
+# e.g. ~/.config/dots/envs.d/{android,flutter}.env
+if [[ -d "$HOME/.config/dots/envs.d" ]]; then
+  for f in "$HOME"/.config/dots/envs.d/*.env; do
+    [[ -f "$f" ]] && source "$f"
+  done
+fi
 
-# Flutter
-export PATH="/opt/flutter/bin:$PATH"
+# --- Secrets (gitignored, per-machine API keys) ---
+# Populate ~/.config/secrets.env with: export OPENROUTER_API_KEY="..." etc.
+if [[ -f "$HOME/.config/secrets.env" ]]; then
+  source "$HOME/.config/secrets.env"
+fi

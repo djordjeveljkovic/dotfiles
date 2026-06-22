@@ -4,7 +4,7 @@ set -euo pipefail
 
 APP_DIR="$HOME/.dots"
 THEME_NAME="bgrt"
-IMAGE_SOURCE="$APP_DIR/plymouth_image.png"
+IMAGE_SOURCE="$APP_DIR/assets/plymouth_image.png"
 IMAGE_TARGET="/usr/share/plymouth/themes/spinner/watermark.png"
 
 timestamp=$(date +"%Y%m%d%H%M%S")

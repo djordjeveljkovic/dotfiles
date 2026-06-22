@@ -10,8 +10,8 @@ profile {
     output "*" enable mode preferred position auto
 }
 
-# --- Laptop docked to one external HDMI (mirror of the old hypr layout) ---
-# Uncomment and adjust names (`swaymsg -t get_outputs`) when you know them.
+# --- Laptop docked to one external HDMI (laptop lid closed / internal off) ---
+# Adjust names via `swaymsg -t get_outputs` if yours differ.
 #
 # profile docked {
 #     output eDP-1 disable

@@ -25,6 +25,6 @@ pkill swaybg 2>/dev/null || true
 swaymsg "output * bg '$WALL' fill"
 
 # Persist as the default background so the next boot keeps it
-cp "$WALL" "$HOME/.dots/background"
+cp "$WALL" "$HOME/.dots/assets/background"
 
 notify-send "Wallpaper set" "$(basename "$WALL")"
