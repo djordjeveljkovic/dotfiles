@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# script-yy — `yy` shell wrapper around yazi.
+# 1. Spawns yazi in the current directory.
+# 2. yazi writes the final cwd to $YAZI_CWD_FILE (tmpfile).
+# 3. On exit, this script `cd`s into that path so the calling shell lands
+#    in yazi's last directory.
+#
+# Bind: `bindsym $mod+e exec $terminal --class=com.x.FloatingWindow -e yy`
+#       (or `exec` yazi directly if you don't need the cd-on-quit behaviour).
+
+set -u
+
+# Tmpfile for the cwd handshake. Use $XDG_RUNTIME_DIR if available so the
+# file lives on tmpfs and is auto-cleaned at logout.
+CWD_FILE="${YAZI_CWD_FILE:-${XDG_RUNTIME_DIR:-/tmp}/yazi-cwd.$$}"
+trap 'rm -f -- "$CWD_FILE"' EXIT
+
+YAZI_CWD_FILE="$CWD_FILE" yazi "$@"
+# yazi exits 0 even on `q`; only follow the file if yazi wrote one.
+[ -r "$CWD_FILE" ] && command cd -- "$(cat -- "$CWD_FILE")" || true

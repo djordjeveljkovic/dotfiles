@@ -18,10 +18,9 @@ if [[ ! -f "$WALL" ]]; then
     exit 1
 fi
 
-# Kill any prior swaybg so we don't stack instances
-pkill swaybg 2>/dev/null || true
-
-# Apply to all outputs via swaymsg (sway-native, no separate daemon)
+# Apply to all outputs via swaymsg (sway-native, no external swaybg daemon).
+# `output * bg` survives `swaymsg reload` cleanly because it's set on the
+# output itself, not in a separate process that would have to be respawned.
 swaymsg "output * bg '$WALL' fill"
 
 # Persist as the default background so the next boot keeps it

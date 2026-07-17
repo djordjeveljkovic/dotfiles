@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Brightness control via brightnessctl with mako notification feedback.
+# Replaces swayosd-client --brightness.
+#
+# Subcommands:
+#   up     raise by STEP%
+#   down   lower by STEP%
+
+set -euo pipefail
+
+STEP="${SCREENSHOT_BRIGHTNESS_STEP:-5}"   # percent
+DEVICE="${SCREENSHOT_BRIGHTNESS_DEVICE:-}"   # empty = auto (first writable)
+
+notify() { command -v notify-send >/dev/null && notify-send -a "brightness" -h "string:x-canonical-private-synchronous:brightness" "$@" || true; }
+
+bar() {
+    awk -v pct="$1" 'BEGIN {
+        cells = 12
+        g[0] = "·"; g[1] = "▏"; g[2] = "▎"; g[3] = "▍"
+        g[4] = "▌"; g[5] = "▋"; g[6] = "▊"; g[7] = "▉"
+        total = int(pct * cells * 8 / 100)
+        if (total < 0) total = 0
+        if (total > cells*8) total = cells*8
+        s = "|"
+        for (i = 0; i < cells; i++) {
+            start = i * 8; end = start + 8
+            if (total >= end)      s = s "█"
+            else if (total > start) s = s g[total - start]
+            else                    s = s "·"
+        }
+        s = s "|"
+        printf "%s", s
+    }'
+}
+
+dev_args=()
+[[ -n "$DEVICE" ]] && dev_args=(--device="$DEVICE")
+
+case "${1:-}" in
+    up)
+        brightnessctl set "${STEP}%+" "${dev_args[@]}" >/dev/null
+        pct=$(brightnessctl get "${dev_args[@]}" | awk -F'[()%]' '{print $2}')
+        notify "${pct}%  $(bar "$pct")  Brightness:" -h int:value:"$pct"
+        ;;
+    down)
+        brightnessctl set "${STEP}%-" "${dev_args[@]}" >/dev/null
+        pct=$(brightnessctl get "${dev_args[@]}" | awk -F'[()%]' '{print $2}')
+        notify "${pct}%  $(bar "$pct")  Brightness:" -h int:value:"$pct"
+        ;;
+    -h|--help|help|"")
+        sed -n '2,12p' "$0"
+        ;;
+    *)
+        echo "brightness: unknown subcommand: $1  (try --help)" >&2; exit 1 ;;
+esac

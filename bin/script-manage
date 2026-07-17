@@ -1,47 +1,62 @@
 #!/usr/bin/env bash
+# script-manage — Podman / system management hub
+# Discovers any executable script named `script-manage-*` in ~/.dots/bin
+# and shows them in a gum picker.
+
 set -euo pipefail
 
-# Source the helper to check for dependencies
-# Ensure this file exists: ~/.dots/lib/helpers.sh
 source ~/.dots/lib/helpers.sh
 check_deps
 
 SCRIPT_DIR="$HOME/.dots/bin"
 
-echo "Welcome to your Podman Management Hub!"
+# Discover once at startup (was re-running find on every menu redraw).
+# Sort alphabetically so the menu order is stable across runs.
+mapfile -t script_files < <(
+    find "$SCRIPT_DIR" -maxdepth 1 -type f -name 'script-manage-*' -executable | sort
+)
+
+if [ ${#script_files[@]} -eq 0 ]; then
+    echo "No management scripts found in $SCRIPT_DIR" >&2
+    echo "Add scripts named 'script-manage-*' and make them executable." >&2
+    exit 1
+fi
+
+# Display labels for the menu. Handles acronyms (PHP) and multi-word names
+# that bash's ${var^} (first-letter-only) gets wrong.
+declare -A label=(
+    [network]="Network"
+    [php]="PHP"
+    [database]="Database"
+    [database-management]="Database Management"
+)
+
+# Resolve a filename's stem (script-manage-XYZ) to its display label.
+menu_label() {
+    local key="${1##*script-manage-}"   # strip prefix + path
+    key="${key%.sh}"                    # strip .sh if present
+    printf '%s' "${label[$key]:-${key^}}"
+}
 
 while true; do
-    # Find all executable scripts matching the pattern
-    mapfile -t script_files < <(find "$SCRIPT_DIR" -type f -name "script-manage-*" -executable)
-
-    if [ ${#script_files[@]} -eq 0 ]; then
-        echo "No management scripts found in $SCRIPT_DIR"
-        echo "Please add scripts named 'script-manage-*' and make them executable."
-        exit 1
-    fi
-
-    # Create user-friendly names for the menu
-    declare -a choices
+    # Rebuild choices each loop so we don't carry stale entries when the
+    # user adds/removes scripts between runs (but the file list itself
+    # is discovered once, above).
+    choices=()
     for file in "${script_files[@]}"; do
-        name=$(basename "$file" | sed -e 's/script-manage-//' -e 's/\.sh//')
-        choices+=("Manage ${name^}")
+        choices+=("Manage $(menu_label "$file")")
     done
     choices+=("Exit")
 
-    # Show the main menu
-    # MODIFIED: Added '|| true' to prevent script from exiting on cancel (ESC)
-    main_choice=$(printf "%s\n" "${choices[@]}" | gum choose --header "Select a management area" || true)
+    main_choice=$(printf '%s\n' "${choices[@]}" \
+        | gum choose --header "Select a management area" || true)
 
-    # This check now correctly handles both selecting "Exit" and cancelling the menu
-    if [[ "$main_choice" == "Exit" || -z "$main_choice" ]]; then
-        echo "Goodbye!"
-        break
-    fi
+    # ESC / Ctrl-C from gum → empty string; "Exit" → explicit string.
+    [[ -z "$main_choice" || "$main_choice" == "Exit" ]] && { echo "Goodbye!"; break; }
 
-    # Find the corresponding script file and execute it
+    # Find the file whose label matches the user's pick.
     for file in "${script_files[@]}"; do
-        name=$(basename "$file" | sed -e 's/script-manage-//' -e 's/\.sh//')
-        if [[ "$main_choice" == "Manage ${name^}" ]]; then
+        if [[ "$main_choice" == "Manage $(menu_label "$file")" ]]; then
             "$file"
             break
         fi

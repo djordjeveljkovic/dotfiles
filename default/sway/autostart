@@ -12,8 +12,10 @@ exec swayidle -w \
     resume 'swaymsg "output * dpms on"' \
     before-sleep 'swaylock -f -c 000000' &
 exec mako &
-exec swayosd-server &
-exec swaybg -i ~/.dots/assets/background -m fill &
+# Background: sway-native via `output * bg` (built-in since Sway 1.7).
+# No external swaybg daemon — avoids the double-render fight that happens
+# after `swaymsg reload` if both are active.
+exec --no-startup-id swaymsg "output * bg fill ~/.dots/assets/background"
 
 exec wl-paste --type text --watch cliphist store
 exec wl-paste --type image --watch cliphist store

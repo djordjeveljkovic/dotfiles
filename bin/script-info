@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# script-info — minimal system info TUI for $mod+i
+# Stats: time, date, network, IP, temps, battery, power profile.
+# Keys: [c] copy ip · [m] power mode · [r] refresh · [q] quit.
+# Runs inside a floating terminal; closing the window terminates it.
+
+# NOTE: deliberately no `set -e`. This is an interactive script that must
+# keep running even if one data collector (sensors, hostname, ping, etc.)
+# exits non-zero on a missing sensor / no network / etc.
+set -u
+shopt -s nullglob   # so /sys/class/power_supply/BAT* expands to empty when no battery
+
+# collectors — every function returns 0 and emits a sane fallback ──────────
+ip()    { hostname -I 2>/dev/null | awk '{print $1; exit}' || true; }
+net()   { ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1 && echo online || echo offline; }
+
+temps() {
+    local out=""
+    if command -v sensors >/dev/null 2>&1; then
+        out=$(sensors 2>/dev/null | awk '
+            function v(f){if(match(f,/[0-9]+\.[0-9]+/))return substr(f,RSTART,RLENGTH);return ""}
+            /^Core [0-9]+:/{sub(/:$/,"",$2);printf "cpu%s:%s ",$2,v($3)}
+            /^Package id/{printf "cpu:%s ",v($4)}
+            /^Tctl:|^Tdie:/{printf "cpu:%s ",v($2)}
+            /^edge:|^Composite:/{printf "gpu:%s ",v($2)}
+        ' 2>/dev/null) || out=""
+    fi
+    if [ -z "$out" ] && [ -e /sys/class/thermal/thermal_zone0/temp ]; then
+        out=$(awk '{printf "z%d:%d ",NR,int($1/1000)}' /sys/class/thermal/thermal_zone*/temp 2>/dev/null) || out=""
+    fi
+    printf '%s' "${out:-n/a}"
+}
+
+bat() {
+    local d cap stat
+    for d in /sys/class/power_supply/BAT*; do
+        [ -d "$d" ] || continue
+        [ -r "$d/capacity" ] && [ -r "$d/status" ] || continue
+        cap=$(cat "$d/capacity" 2>/dev/null) || cap="?"
+        stat=$(cat "$d/status" 2>/dev/null) || stat="?"
+        printf '%s%% (%s)\n' "$cap" "${stat,,}"
+        return
+    done
+    echo "plugged in (no battery)"
+}
+
+pmode() {
+    command -v powerprofilesctl >/dev/null 2>&1 \
+        && powerprofilesctl get 2>/dev/null \
+        || echo "n/a"
+}
+
+# render ─────────────────────────────────────────────────
+render() {
+    local i n t b p
+    i=$(ip || true);    [ -z "${i:-}" ] && i="—"
+    n=$(net || true)
+    t=$(temps || true); [ -z "${t:-}" ] && t="—"
+    b=$(bat || true)
+    p=$(pmode || true)
+
+    printf '\033[H\033[2J'
+    echo "──────────────────────────────────────────────────"
+    printf '  %-8s %s\n' time    "$(date '+%H:%M:%S')"
+    printf '  %-8s %s\n' date    "$(date '+%A %d %B %Y')"
+    printf '  %-8s %s\n' network "$n"
+    printf '  %-8s %s\n' ip      "$i"
+    printf '  %-8s %s\n' temps   "$t"
+    printf '  %-8s %s\n' battery "$b"
+    printf '  %-8s %s\n' power   "$p"
+    echo "──────────────────────────────────────────────────"
+    echo "  [c] copy ip   [m] power mode   [r] refresh   [q] quit"
+    echo
+}
+
+# actions ────────────────────────────────────────────────
+set_power() {
+    local mode avail
+    avail=$(powerprofilesctl list 2>/dev/null \
+        | awk -F: '/^[[:space:]]+[a-z-]+:[[:space:]]*$/{gsub(/[[:space:]]/,"",$1);print $1}' \
+        | paste -sd '/' -)
+    [ -z "${avail:-}" ] && { echo "  no modes found"; sleep 1; return; }
+    echo "  available: $avail"
+    read -r -p "  set ▸ " mode || return
+    [ -z "${mode:-}" ] && { echo "  cancelled"; sleep 1; return; }
+    if powerprofilesctl set "$mode" 2>/dev/null; then
+        echo "  ✓ power → $mode"
+    else
+        echo "  ✘ failed (typo or need root?)"
+    fi
+    sleep 1
+}
+
+# main ───────────────────────────────────────────────────
+trap 'exit 0' INT TERM
+render
+while :; do
+    read -r -n 1 -p "  ▸ " key || { echo; exit 0; }
+    echo
+    case "${key:-q}" in
+        c) wl-copy <<<"$(ip)" 2>/dev/null \
+            && echo "  ✓ ip copied" \
+            || echo "  ✘ wl-copy not available"
+           sleep 1 ;;
+        m) set_power ;;
+        r) render ;;
+        q) exit 0 ;;
+        *) echo "  unknown key"; sleep 1 ;;
+    esac
+done

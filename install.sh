@@ -44,7 +44,7 @@ fi
 if [[ ${#OPTS[@]} -eq 0 ]]; then
   SELECTED=$(gum choose --no-limit --header "Select optional add-ons (space to toggle, enter to confirm)" \
     "--nvidia" "--plymouth" "--bluetooth" "--printer" \
-    "--android" "--flutter" "--antigravity" "--zed" "--ollama" || true)
+    "--android" "--flutter" "--antigravity" "--zed" "--ollama" "--pi" || true)
   while IFS= read -r line; do
     [[ -n "$line" ]] && OPTS+=("$line")
   done <<< "$SELECTED"

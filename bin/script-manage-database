@@ -15,9 +15,10 @@ create_database() {
     db_type=$(gum choose "MySQL/MariaDB" "PostgreSQL" "MongoDB" "Redis")
     if [[ -z "$db_type" ]]; then return; fi
 
-    # Call the network script to get the network flag
+    # Call the network script to get the network flag (full path so we
+    # don't depend on PATH including ~/.dots/bin).
     echo "Getting network choice..."
-    network_flag=$(script-manage-net.sh --select)
+    network_flag=$("$HOME/.dots/bin/script-manage-network" --select)
     if [[ -z "$network_flag" ]]; then
         echo "❌ Network selection canceled. Aborting DB creation."; return 1;
     fi

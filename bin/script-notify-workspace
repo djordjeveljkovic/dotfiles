@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Minimal workspace-change / window-move notification for Sway.
+# Usage: script-notify-workspace <switch|move> <workspace-number>
+# Designed to be chained on the end of a bindsym line, e.g.:
+#   bindsym $mod+3  workspace number 3, exec ~/.dots/bin/script-notify-workspace switch 3
+#   bindsym $mod+Shift+3 move container to workspace number 3, exec ~/.dots/bin/script-notify-workspace move 3
+
+# No `set -e`: if notify-send is missing or mako rejects, just exit 0.
+shopt -s nullglob
+
+action="${1:-}"
+ws="${2:-}"
+
+# Optional: friendly names per workspace. Edit as desired; falls back to
+# the bare number if not set or if the key is missing.
+declare -A names=(
+    [1]="1"
+    [2]="2"
+    [3]="3"
+    [4]="4"
+    [5]="5"
+    [6]="6"
+    [7]="7"
+    [8]="8"
+    [9]="9"
+    [10]="10"
+)
+name="${names[$ws]:-$ws}"
+
+case "$action" in
+    switch)
+        notify-send \
+            -a "sway" \
+            -t 1200 \
+            -h "string:x-canonical-private-synchronous:workspace" \
+            "→ $ws" "workspace" \
+            2>/dev/null
+        ;;
+    move)
+        notify-send \
+            -a "sway" \
+            -t 1200 \
+            -h "string:x-canonical-private-synchronous:workspace" \
+            "↪ $ws" "window moved" \
+            2>/dev/null
+        ;;
+esac
+exit 0

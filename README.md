@@ -51,7 +51,7 @@ git clone git@github.com:djordjeveljkovic/dotfiles.git ~/.dots
 |---|---|
 | **base** | paru, gum, eza/fzf/rg/fd/bat/zoxide, fastfetch, alacritty, nvim, rustup/clang/llvm/mise, node/npm/go, git/gh/lazygit/diff-so-fancy, tmux, podman+lazydocker, power-profiles-daemon, iwd |
 | **server** | mariadb-libs, postgresql-libs, htop |
-| **desktop** | sway, swaylock/idle/bg, waybar, fuzzel, mako, swayosd, kanshi, autotiling, alacritty, yazi, btop, impala, bluetui, wiremix, pipewire/wireplumber/playerctl, brightnessctl, mpv, imv, grim/slurp/wlsunset, google-chrome, TTY autologin |
+| **desktop** | sway, swaylock/idle/bg, waybar, fuzzel, mako, kanshi, autotiling, alacritty, yazi, btop, impala, bluetui, wiremix, pipewire/wireplumber/playerctl, brightnessctl, mpv, imv, grim/slurp/wlsunset, libnotify, swappy, imagemagick, jq, google-chrome, TTY autologin |
 
 ## Opt-in flags (each standalone, except `--flutter`→`--android`)
 
@@ -73,3 +73,30 @@ patched to `--any`. `install.sh` prints `systemd-analyze blame` at the end.
 
 `install/4-config.sh` symlinks each `~/.dots/config/*` into `~/.config/`, so
 editing a config edits the repo directly and `git pull` applies instantly.
+
+## Screenshots
+
+Bindings in `default/sway/bindings`, both funneled through
+`bin/script-screenshot`:
+
+| Key | Action |
+|---|---|
+| `Mod+s` | region → save to `~/Pictures/screenshots` + clipboard |
+| `Mod+Shift+s` | region → swappy annotate → save + clipboard |
+
+`notify-send` (libnotify) confirms every action. The script also exposes
+`region`, `output`, `window`, `clip`, `color`, `annotate`, `delay N <sub>`
+subcommands — run `script-screenshot --help` or call it from the terminal
+for the others.
+
+## Pi coding-agent packages
+
+Three public `djordjeveljkovic/pi-*` repos are installed under `~/.pi/agent/`:
+
+```
+~/.pi/agent/extensions/list-picker/   # TUI list component (peer dep)
+~/.pi/agent/extensions/skill-manager/ # /skills commands, skill_list/toggle/reload tools
+~/.pi/agent/skills-library/           # 85 SKILL.md files across 10 collections
+```
+
+Reinstall with `gh repo clone …` + `(cd skill-manager && npm install)`; see `improvement.md §13` for details.

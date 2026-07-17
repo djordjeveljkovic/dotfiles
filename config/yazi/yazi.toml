@@ -1,0 +1,61 @@
+# =====================================================
+# Yazi — terminal file manager
+# Docs: https://yazi-rs.github.io/docs/configuration
+# =====================================================
+# Image preview: alacritty has no native graphics protocol, so install
+# ueberzugpp (X11/Wayland window-system protocol) and keep `image = "auto"`
+# — yazi will pick it up automatically.
+
+# ---- Manager (file list) -----------------------------------------------
+[manager]
+ratio          = [1, 4, 3]      # parent list : current : preview
+show_hidden    = false
+sort_by        = "name"         # none | mtime | btime | atime | size | ext | name
+sort_dir_first = true
+sort_reverse   = false
+linemode       = "size"         # none | size | perm | owner | links | date
+scrolloff      = 5
+mouse_events  = ["click", "scroll", "touch", "drag", "move"]
+title_format   = "{cwd} — Yazi"
+# tab_width = 2
+# show_symlink = false
+# preview_cached_files_age = 86400
+
+# ---- Preview pane --------------------------------------------------------
+[preview]
+# Image protocol: "auto" picks the best for the current terminal.
+# alacritty: install ueberzugpp (sudo pacman -S ueberzugpp) for real images.
+image            = "auto"
+image_filter     = "triangle"   # nearest | triangle | catmull-rom | lanczos3
+image_quality    = 75           # 50-90
+max_width        = 1600
+max_height       = 1200
+cache_dir        = ""           # empty = $XDG_CACHE_HOME/yazi
+# ueberzug_scale  = 1
+# ueberzug_offset = [0, 0, 0, 0]
+
+# File-type specific preview scripts live in ~/.config/yazi/plugins/.
+# Code highlighting, directory listing, archive listing, etc. are handled
+# by the built-in previewers; custom prework/previewer/spotter plugins
+# can be added under [plugin] below.
+
+# ---- Opening files -------------------------------------------------------
+[opener]
+# Edit the cwd-file to make the terminal `cd` into the last visited dir
+# when yazi quits. The companion shell hook is in keymap.toml ("cd on quit").
+# Default openers (override per-filetype as needed):
+#   txt, md   -> less            (or: $EDITOR for inline)
+#   png, jpg  -> open in system viewer
+#   *         -> noop
+
+# ---- Plugin system -------------------------------------------------------
+[plugin]
+# preloaders   = []
+# previewers   = []
+# spotters     = []
+# fetchers     = []
+
+# ---- Tasks / Input / Confirm (advanced; defaults are fine) ---------------
+# [tasks]
+# [input]
+# [confirm]

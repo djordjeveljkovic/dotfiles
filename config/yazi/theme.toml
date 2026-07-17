@@ -1,0 +1,103 @@
+# =====================================================
+# Yazi theme — matches ~/.dots/current/theme/alacritty.toml
+# (dark base #16181a, accent palette from theme/sway.conf)
+# Docs: https://yazi-rs.github.io/docs/configuration/theme
+# =====================================================
+
+[mgr]
+cwd          = { fg = "#8caaee", italic = true }     # theme_accent
+hovered      = { bg = "#24273a" }                    # theme_bg
+preview_hovered = { bg = "#24273a" }
+
+# Find
+find_keyword   = { fg = "#16181a", bg = "#a6e3a1", bold = true }  # green
+find_position  = { fg = "#89dceb", bg = "#1e2030", bold = true }  # cyan
+find_count     = { fg = "#16181a", bg = "#f9e2af", bold = true }  # yellow
+
+# Marker
+marker_copied   = { fg = "#a6e3a1", bg = "#a6e3a1" }
+marker_cut      = { fg = "#ed8796", bg = "#ed8796" }                # urgent
+marker_marked   = { fg = "#cba6f7", bg = "#cba6f7" }                # purple
+marker_selected = { fg = "#8caaee", bg = "#8caaee" }                # accent
+
+# Count
+count_copied    = { fg = "#16181a", bg = "#a6e3a1" }
+count_cut       = { fg = "#16181a", bg = "#ed8796" }
+count_selected  = { fg = "#16181a", bg = "#8caaee" }
+
+# Border
+border_symbol = "│"
+border_style  = { fg = "#313244" }                                    # surface
+
+# Tab
+tab_active      = { fg = "#16181a", bg = "#8caaee", bold = true }
+tab_inactive    = { fg = "#cad3f5", bg = "#24273a" }
+tab_width       = 2
+
+# Status
+status_bar          = { fg = "#cad3f5", bg = "#181926" }
+status_bar_separator = "│"
+status_bar_progress = { fg = "#8caaee", bg = "#181926" }
+
+# Select
+select_bg        = { bg = "#363a4f" }
+select_arrow     = "▏"
+
+# Code
+code_title    = { fg = "#8caaee" }
+code_bloc     = { fg = "#6c7086" }
+code_context  = { fg = "#7f849c", italic = true }
+code_line     = { fg = "#cad3f5" }
+code_selection = { bg = "#363a4f" }
+code_inactive_selection = { bg = "#292e42" }
+
+# Syntect theme (leave default to use built-in; override to a .tmTheme):
+# syntect_theme = ""
+
+[mode]
+normal_main       = { fg = "#16181a", bg = "#a6e3a1", bold = true }
+normal_alt        = { fg = "#16181a", bg = "#a6e3a1" }
+select_main       = { fg = "#16181a", bg = "#f9e2af", bold = true }
+select_alt        = { fg = "#16181a", bg = "#f9e2af" }
+unset_main        = { fg = "#16181a", bg = "#f38ba8", bold = true }
+unset_alt         = { fg = "#16181a", bg = "#f38ba8" }
+
+[status]
+progress_label  = { fg = "#8caaee", bold = true }
+progress_total  = { fg = "#cad3f5" }
+progress_pos    = { fg = "#a6e3a1" }
+progress_perc   = { fg = "#f9e2af" }
+
+[help]
+footer         = { fg = "#8caaee" }
+
+[input]
+border   = { fg = "#8caaee" }
+title    = { fg = "#8caaee" }
+value    = { fg = "#cad3f5" }
+selected = { bg = "#363a4f" }
+
+[confirm]
+border = { fg = "#f9e2af" }
+title  = { fg = "#f9e2af" }
+content = { fg = "#cad3f5" }
+body    = { fg = "#cad3f5" }
+list    = { fg = "#cad3f5" }
+btn_yes = { fg = "#a6e3a1", bold = true }
+btn_no  = { fg = "#ed8796", bold = true }
+
+[which]
+border = { fg = "#8caaee" }
+key    = { fg = "#8caaee", bold = true }
+desc   = { fg = "#cad3f5" }
+separator = " → "
+
+[notify]
+title     = { fg = "#8caaee", bold = true }
+body      = { fg = "#cad3f5" }
+icon_info = { fg = "#8caaee" }
+icon_warn = { fg = "#f9e2af" }
+icon_error = { fg = "#ed8796" }
+level_info = { bg = "#181926" }
+level_warn = { bg = "#3a2a1a" }
+level_error = { bg = "#3a1a1a" }

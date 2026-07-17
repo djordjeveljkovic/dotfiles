@@ -1,0 +1,38 @@
+# =====================================================
+# Yazi keybindings — vim-style, minimal overrides
+# Docs: https://yazi-rs.github.io/docs/configuration/keymap
+# =====================================================
+# Modifiers: <C-…> Ctrl · <A-…> Alt · <S-…> Shift · `~` leader.
+# yazi defaults are sensible; this file only ADDS or CHANGES a handful.
+
+# ---- Manager: prepend_keymap (intercept defaults) -----------------------
+# `q` quits with cd-on-quit if launched via the `yy` wrapper.
+[manager]
+prepend_keymap = [
+    { on = [ "q" ], run = "quit", desc = "Quit (cd-on-quit via yy wrapper)" },
+]
+keymap = [
+    # --- cd shortcuts (vim-like) ---------------------------------------
+    { on = [ "g", "g" ], run = "cd ~", desc = "Go home (~)" },
+    { on = [ "g", "/" ], run = "cd /", desc = "Go root (/)" },
+    { on = [ "H"      ], run = "cd ~", desc = "Go home (~)" },
+
+    # --- show keybindings (leader) -------------------------------------
+    { on = [ "~", "?" ], run = "shell ~/.dots/bin/script-show-keybindings", desc = "Show all keybindings" },
+
+    # --- paste overwrite -----------------------------------------------
+    { on = [ "P" ], run = "paste --force", desc = "Paste (overwrite)" },
+]
+
+# ---- Help screen ---------------------------------------------------------
+[help]
+keymap = [
+    { on = [ "<Esc>", "q" ], run = "close", desc = "Close" },
+]
+
+# ---- Completion picker ---------------------------------------------------
+[pick]
+keymap = [
+    { on = [ "<C-n>" ], run = "next", desc = "Next" },
+    { on = [ "<C-p>" ], run = "prev", desc = "Prev" },
+]

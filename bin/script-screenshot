@@ -1,0 +1,152 @@
+#!/usr/bin/env bash
+# Screenshot helper for sway. Replaces ad-hoc grim/slurp bindsym lines.
+#
+# Subcommands:
+#   region         select region   → save to ~/Pictures/screenshots + copy to clipboard
+#   output         full output     → save + clipboard
+#   window         focused window  → save + clipboard
+#   clip           select region   → clipboard only (no file)
+#   color          color picker    → hex to clipboard
+#   annotate       select region   → swappy overlay → save + clipboard
+#   delay N <sub>  wait N seconds (default 3), then run <sub>
+#
+# Bind in ~/.dots/default/sway/bindings — see README §Screenshots.
+
+set -euo pipefail
+
+SHOT_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/screenshots"
+mkdir -p "$SHOT_DIR"
+
+# Layout: image scaled to fit the mako notification's INNER content area
+# (notification width minus borders and padding), aspect preserved,
+# with a small caption bar underneath showing the file path.
+#
+# MUST stay in sync with ~/.dots/current/theme/mako.ini:
+#   width       = NOTIF_OUTER_WIDTH
+#   border-size = NOTIF_BORDER      (applied on both sides)
+#   padding     = NOTIF_PADDING     (applied on both sides)
+NOTIF_OUTER_WIDTH="${SCREENSHOT_NOTIF_OUTER_WIDTH:-420}"
+NOTIF_BORDER="${SCREENSHOT_NOTIF_BORDER:-2}"
+NOTIF_PADDING="${SCREENSHOT_NOTIF_PADDING:-10}"
+NOTIF_INNER_WIDTH=$(( NOTIF_OUTER_WIDTH - 2 * NOTIF_BORDER - 2 * NOTIF_PADDING ))
+CAPTION_BAR=32
+
+ts()      { date +%Y%m%d-%H%M%S; }
+
+# make_preview <src.png> <caption-text> <out.png>
+# Stacks the image (resized to NOTIF_INNER_WIDTH) on top of a small caption bar.
+# Mako has no native image-above-text layout, so we composite one PNG and
+# pass that as the notification's image-path hint.
+make_preview() {
+    local src="$1" caption="$2" out="$3"
+    magick \
+        \( "$src" -resize "${NOTIF_INNER_WIDTH}x" -background "#24273a" -alpha remove \) \
+        \( -size "${NOTIF_INNER_WIDTH}x${CAPTION_BAR}" xc:"#24273a" \
+           -fill "#cad3f5" -gravity center -pointsize 12 \
+           -font "DejaVu-Sans-Mono" -annotate +0+0 "$caption" \) \
+        -background "#24273a" -append \
+        "$out"
+}
+
+# notify <summary> <body> <image.png> [caption]
+# Composites image + caption into a preview PNG, then sends it to mako via
+# the image-path hint so the preview shows above the body text.
+notify() {
+    command -v notify-send >/dev/null || return 0
+    local summary="$1" body="$2" img="${3:-}" caption="${4:-}"
+    local hint_args=()
+    if [[ -n "$img" && -f "$img" ]]; then
+        local preview
+        preview="$(mktemp --suffix=.png)"
+        # caption falls back to basename($img) when not provided
+        make_preview "$img" "${caption:-$(basename "$img")}" "$preview"
+        hint_args=(--hint="string:image-path:$preview")
+        # rm the preview after mako has had time to read it
+        ( sleep 60 && rm -f "$preview" ) &
+    fi
+    notify-send -a "screenshot" \
+        -h "string:x-canonical-private-synchronous:screenshot" \
+        "${hint_args[@]}" "$summary" "$body"
+}
+err()     { echo "screenshot: $*" >&2; notify "Error" "$*" ; exit 1; }
+
+need() {
+    for c in "$@"; do
+        command -v "$c" >/dev/null 2>&1 || err "missing dependency: $c"
+    done
+}
+
+# focused window geometry: "<x>,<y> <w>x<h>"
+window_geom() {
+    swaymsg -t get_tree -r |
+        jq -r '.. | objects | select(.focused==true and .rect?) | "\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)"' |
+        head -1
+}
+
+save_and_copy() {
+    local file="$1"
+    wl-copy -t image/png < "$file"
+    notify "Screenshot saved" "$file  (+ clipboard)" "$file" "$file"
+}
+
+case "${1:-}" in
+    region)
+        need grim slurp wl-copy
+        f="$SHOT_DIR/$(ts).png"
+        grim -g "$(slurp)" "$f" || err "grim cancelled or failed"
+        save_and_copy "$f"
+        ;;
+    output)
+        need grim wl-copy
+        f="$SHOT_DIR/$(ts).png"
+        grim "$f" || err "grim failed"
+        save_and_copy "$f"
+        ;;
+    window)
+        need grim swaymsg jq wl-copy
+        geom=$(window_geom)
+        [[ -n "$geom" ]] || err "no focused window"
+        f="$SHOT_DIR/$(ts).png"
+        grim -g "$geom" "$f" || err "grim failed"
+        save_and_copy "$f"
+        ;;
+    clip)
+        need grim slurp wl-copy
+        grim -g "$(slurp)" - | wl-copy -t image/png \
+            && notify "Screenshot copied" "Region on clipboard"
+        ;;
+    color)
+        need grim slurp wl-copy
+        # wl-clipboard's `wl-copy` defaults to text/plain for stdin unless told.
+        grim -g "$(slurp -p)" - \
+            | magick - -format "%[pixel:p{0,0}]" txt: - 2>/dev/null \
+            | tail -1 \
+            | grep -oE '#[0-9A-Fa-f]{6}' \
+            | head -1 \
+            | tr -d '\n' \
+            | wl-copy \
+            && notify "Color copied" "$(wl-paste) on clipboard"
+        ;;
+    annotate)
+        need grim slurp swappy wl-copy
+        f="$SHOT_DIR/$(ts).png"
+        grim -g "$(slurp)" - | swappy -f - -o "$f" \
+            || err "swappy cancelled"
+        wl-copy -t image/png < "$f"
+        notify "Annotated screenshot saved" "$f  (+ clipboard)" "$f" "$f"
+        ;;
+    delay)
+        n="${2:-3}"
+        shift 2
+        (( n > 0 )) || err "delay must be > 0"
+        notify "Screenshot" "Taking in ${n}s…"
+        sleep "$n"
+        exec "$0" "$@"
+        ;;
+    -h|--help|help|"")
+        sed -n '2,16p' "$0"
+        ;;
+    *)
+        err "unknown subcommand: $1  (try --help)"
+        ;;
+esac

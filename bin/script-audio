@@ -1,0 +1,82 @@
+#!/usr/bin/env bash
+# Audio control via wireplumber (wpctl) with mako notification feedback.
+# Replaces swayosd-client --output-volume / --input-volume.
+#
+# Subcommands:
+#   up       +1%  sink volume
+#   down     -1%  sink volume
+#   mute     toggle sink mute
+#   mic      toggle source mute
+#
+# Notifications go through mako via notify-send.
+
+set -euo pipefail
+
+STEP="${SCREENSHOT_VOLUME_STEP:-1}" # percent
+SINK="@DEFAULT_AUDIO_SINK@"
+SOURCE="@DEFAULT_AUDIO_SOURCE@"
+
+notify() { command -v notify-send >/dev/null && notify-send -a "audio" -h "string:x-canonical-private-synchronous:audio" "$@" || true; }
+
+# Render a 50-cell bar. Each cell is either "-" (empty) or "█" (filled);
+# no sub-block characters so every cell is the same monospace width and
+# the bar never "oscillates" between rows. 50 cells = 2% per cell, so a
+# 1% press changes the bar by at most one cell.
+# Layout: |------...------|  (empty)  /  |██████...██████|  (full)
+bar() {
+  awk -v pct="$1" 'BEGIN {
+        cells = 100
+        filled = pct
+        if (filled < 0) filled = 0
+        if (filled > cells) filled = cells
+        for (i = 1; i < cells; i++) {
+            s = s (i < filled ? "|" : " ")
+        }
+        printf "%s", s
+    }'
+}
+
+case "${1:-}" in
+up)
+  wpctl set-volume -l 1.0 "$SINK" "${STEP}%+" >/dev/null
+  vol=$(wpctl get-volume "$SINK" | awk '{print int($2*100)}')
+  notify "$(bar "$vol")" "Volume: ${vol}%" -h int:value:"$vol"
+  ;;
+down)
+  wpctl set-volume "$SINK" "${STEP}%-" >/dev/null
+  vol=$(wpctl get-volume "$SINK" | awk '{print int($2*100)}')
+  notify "$(bar "$vol")" "Volume: ${vol}%" -h int:value:"$vol"
+  ;;
+mute)
+  wpctl set-mute "$SINK" toggle >/dev/null
+  # Read mute state. wpctl get-mute output varies wildly by wireplumber
+  # build; pactl is the stable fallback. Match every known format.
+  state=$(wpctl get-mute "$SINK" 2>/dev/null) || state=""
+  [[ -z "$state" ]] && state=$(pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null) || state=""
+  case "${state,,}" in
+    *"[muted]"*|*"mute: yes"*|*"muted: yes"*|*"muted: 1"*|"muted"|"yes")
+      notify "$(bar 0)" "Volume: 0% (muted)" -h int:value:0 -h string:state:muted ;;
+    *)
+      vol=$(wpctl get-volume "$SINK" | awk '{print int($2*100)}')
+      notify "$(bar "$vol")" "Volume: ${vol}% unmuted" -h int:value:"$vol" ;;
+  esac
+  ;;
+mic)
+  wpctl set-mute "$SOURCE" toggle >/dev/null
+  state=$(wpctl get-mute "$SOURCE" 2>/dev/null) || state=""
+  [[ -z "$state" ]] && state=$(pactl get-source-mute @DEFAULT_SOURCE@ 2>/dev/null) || state=""
+  case "${state,,}" in
+    *"[muted]"*|*"mute: yes"*|*"muted: yes"*|*"muted: 1"*|"muted"|"yes")
+      notify "Microphone" "Muted" -h string:state:muted ;;
+    *)
+      notify "Microphone" "Unmuted" -h string:state:on ;;
+  esac
+  ;;
+-h | --help | help | "")
+  sed -n '2,15p' "$0"
+  ;;
+*)
+  echo "audio: unknown subcommand: $1  (try --help)" >&2
+  exit 1
+  ;;
+esac

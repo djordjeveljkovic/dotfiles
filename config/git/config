@@ -1,6 +1,6 @@
 [user]
-    name=Djordje Veljkovic
-    email=djveljkovic3019rn@raf.rs
+	name = Djordje Veljkovic
+	email = djveljkovic3019rn@raf.rs
     username=djordjeveljkovic
 [core]
     compression=9
@@ -15,7 +15,7 @@
     insteadOf="gh:"
 
 [init]
-    defaultBranch="dev"
+	defaultBranch = main
 
 [status]
     branch=true
@@ -45,7 +45,7 @@
 
 [pull]
     default=current
-    rebase=true
+	rebase = true
 
 [rebase]
     autoStash=true
@@ -74,3 +74,8 @@
     frag       = magenta
     context    = white
     whitespace = yellow reverse
+[alias]
+	co = checkout
+	br = branch
+	ci = commit
+	st = status

@@ -5,7 +5,7 @@ set -euo pipefail
 # --- Sway + wayland stack ---
 paru -S --noconfirm --needed \
   sway swaylock swayidle swaybg \
-  waybar fuzzel mako swayosd \
+  waybar fuzzel mako \
   polkit-gnome \
   autotiling kanshi
 
@@ -25,6 +25,10 @@ paru -S --noconfirm --needed \
   wl-clipboard wl-clip-persist cliphist \
   grim slurp wlsunset \
   google-chrome
+
+# --- Screenshots: swappy annotation + libnotify (notify-send) + imagemagick (color picker hex parse) ---
+paru -S --noconfirm --needed \
+  swappy libnotify imagemagick jq
 
 # --- Fonts (alacritty uses Fira Code NF) ---
 paru -S --noconfirm --needed ttf-firacode-nerd

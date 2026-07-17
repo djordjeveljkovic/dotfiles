@@ -32,7 +32,7 @@ bindsym $mod+n exec ~/.dots/bin/script-toggle-sunset
 
 # Scripts & Info
 bindsym $mod+Control+i exec ~/.dots/bin/script-toggle-idle
-bindsym $mod+i exec $terminal --class=com.x.FloatingWindow -e fastfetch
+bindsym $mod+i exec $terminal --class=com.x.FloatingWindow -o font.size=24 -e ~/.dots/bin/script-info
 bindsym $mod+Shift+p exec ~/.dots/bin/script-show-keybindings
 bindsym $mod+v exec "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"
 
@@ -45,36 +45,34 @@ bindsym $mod+Control+comma exec "makoctl mode -t do-not-disturb && (makoctl mode
 # Media & Hardware
 # -----------------------------------------------------
 
-# Volume & Mic
-bindsym XF86AudioRaiseVolume exec swayosd-client --output-volume=+5
-bindsym XF86AudioLowerVolume exec swayosd-client --output-volume=-5
-bindsym XF86AudioMute exec swayosd-client --output-volume=mute-toggle
-bindsym XF86AudioMicMute exec swayosd-client --input-volume=mute-toggle
+# Volume & Mic — wpctl via ~/.dots/bin/script-audio (mako feedback)
+bindsym XF86AudioRaiseVolume exec ~/.dots/bin/script-audio up
+bindsym XF86AudioLowerVolume exec ~/.dots/bin/script-audio down
+bindsym XF86AudioMute       exec ~/.dots/bin/script-audio mute
+bindsym XF86AudioMicMute    exec ~/.dots/bin/script-audio mic
 
-# Brightness
-bindsym XF86MonBrightnessUp exec swayosd-client --brightness raise
-bindsym XF86MonBrightnessDown exec swayosd-client --brightness lower 
+# Brightness — brightnessctl via ~/.dots/bin/script-brightness (mako feedback)
+bindsym XF86MonBrightnessUp   exec ~/.dots/bin/script-brightness up
+bindsym XF86MonBrightnessDown exec ~/.dots/bin/script-brightness down
 
-# Player Controls
-bindsym XF86AudioNext exec swayosd-client --playerctl=next
-bindsym XF86AudioPrev exec swayosd-client --playerctl=prev
-bindsym XF86AudioPlay exec swayosd-client --playerctl=play-pause
-bindsym XF86AudioPause exec swayosd-client --playerctl=play-pause
+# Player Controls — playerctl via ~/.dots/bin/script-media (mako feedback)
+bindsym XF86AudioNext  exec ~/.dots/bin/script-media next
+bindsym XF86AudioPrev  exec ~/.dots/bin/script-media prev
+bindsym XF86AudioPlay  exec ~/.dots/bin/script-media toggle
+bindsym XF86AudioPause exec ~/.dots/bin/script-media toggle
 
-# Keyboard Layout
-bindsym Mod1+Shift_L exec "swaymsg input type:keyboard xkb_switch_layout next && swayosd-client --custom-message \"$(swaymsg -t get_inputs | jq -r '.[] | select(.type == \"keyboard\") | .xkb_active_layout_name')\" --custom-icon preferences-desktop-keyboard"
+# Keyboard Layout — see ~/.dots/bin/script-notify-layout
+bindsym Mod1+Shift_L exec ~/.dots/bin/script-notify-layout
 
 # -----------------------------------------------------
-# Screenshots (grim + slurp + wl-copy) and Color Picker
+# Screenshots — see ~/.dots/bin/script-screenshot
+# Absolute path because sway's exec PATH does not include ~/.dots/bin
+# (TTY autologin → exec sway inherits getty's minimal env).
 # -----------------------------------------------------
-# Region screenshot -> copy to clipboard
-bindsym Print exec grim -g "$(slurp)" - | wl-copy
-# Full output screenshot -> save file
-bindsym Shift+Print exec grim - | wl-copy
-# Region screenshot (mod variant) -> save to Pictures
-bindsym $mod+s exec grim -g "$(slurp)" "$HOME/Pictures/screenshots/$(date +%Y%m%d-%H%M%S).png"
-# Color picker -> copy hex to clipboard
-bindsym $mod+Shift+s exec grim -g "$(slurp -p)" - | magick - -format "%[pixel:p{0,0}]" txt: | tail -1 | grep -o '#[0-9A-Fa-f]\{6\}' | wl-copy
+# Region selection → save to ~/Pictures/screenshots + copy to clipboard
+bindsym $mod+s        exec ~/.dots/bin/script-screenshot region
+# Region selection → swappy annotate → save + clipboard
+bindsym $mod+Shift+s  exec ~/.dots/bin/script-screenshot annotate
 
 # -----------------------------------------------------
 # Window Management & Tiling
@@ -105,7 +103,7 @@ bindsym $mod+Shift+j move down
 
 # Tab / Workspace Cycling (sway-native; no helper script)
 bindsym Mod1+Tab focus next
-bindsym $mod+Tab workspace next_on_output
+# bindsym $mod+Tab workspace next_on_output
 bindsym $mod+Shift+Tab workspace prev_on_output
 bindsym $mod+button4 workspace next_on_output
 bindsym $mod+button5 workspace prev_on_output
@@ -116,28 +114,28 @@ bindsym $mod+slash workspace back_and_forth
 # -----------------------------------------------------
 
 # Switch Workspaces
-bindsym $mod+1 workspace number 1
-bindsym $mod+2 workspace number 2
-bindsym $mod+3 workspace number 3
-bindsym $mod+4 workspace number 4
-bindsym $mod+5 workspace number 5
-bindsym $mod+6 workspace number 6
-bindsym $mod+7 workspace number 7
-bindsym $mod+8 workspace number 8
-bindsym $mod+9 workspace number 9
-bindsym $mod+0 workspace number 10
+bindsym $mod+1 workspace number 1, exec ~/.dots/bin/script-notify-workspace switch 1
+bindsym $mod+2 workspace number 2, exec ~/.dots/bin/script-notify-workspace switch 2
+bindsym $mod+3 workspace number 3, exec ~/.dots/bin/script-notify-workspace switch 3
+bindsym $mod+4 workspace number 4, exec ~/.dots/bin/script-notify-workspace switch 4
+bindsym $mod+5 workspace number 5, exec ~/.dots/bin/script-notify-workspace switch 5
+bindsym $mod+6 workspace number 6, exec ~/.dots/bin/script-notify-workspace switch 6
+bindsym $mod+7 workspace number 7, exec ~/.dots/bin/script-notify-workspace switch 7
+bindsym $mod+8 workspace number 8, exec ~/.dots/bin/script-notify-workspace switch 8
+bindsym $mod+9 workspace number 9, exec ~/.dots/bin/script-notify-workspace switch 9
+bindsym $mod+0 workspace number 10, exec ~/.dots/bin/script-notify-workspace switch 10
 
 # Move Window to Workspace
-bindsym $mod+Shift+1 move container to workspace number 1
-bindsym $mod+Shift+2 move container to workspace number 2
-bindsym $mod+Shift+3 move container to workspace number 3
-bindsym $mod+Shift+4 move container to workspace number 4
-bindsym $mod+Shift+5 move container to workspace number 5
-bindsym $mod+Shift+6 move container to workspace number 6
-bindsym $mod+Shift+7 move container to workspace number 7
-bindsym $mod+Shift+8 move container to workspace number 8
-bindsym $mod+Shift+9 move container to workspace number 9
-bindsym $mod+Shift+0 move container to workspace number 10
+bindsym $mod+Shift+1 move container to workspace number 1, exec ~/.dots/bin/script-notify-workspace move 1
+bindsym $mod+Shift+2 move container to workspace number 2, exec ~/.dots/bin/script-notify-workspace move 2
+bindsym $mod+Shift+3 move container to workspace number 3, exec ~/.dots/bin/script-notify-workspace move 3
+bindsym $mod+Shift+4 move container to workspace number 4, exec ~/.dots/bin/script-notify-workspace move 4
+bindsym $mod+Shift+5 move container to workspace number 5, exec ~/.dots/bin/script-notify-workspace move 5
+bindsym $mod+Shift+6 move container to workspace number 6, exec ~/.dots/bin/script-notify-workspace move 6
+bindsym $mod+Shift+7 move container to workspace number 7, exec ~/.dots/bin/script-notify-workspace move 7
+bindsym $mod+Shift+8 move container to workspace number 8, exec ~/.dots/bin/script-notify-workspace move 8
+bindsym $mod+Shift+9 move container to workspace number 9, exec ~/.dots/bin/script-notify-workspace move 9
+bindsym $mod+Shift+0 move container to workspace number 10, exec ~/.dots/bin/script-notify-workspace move 10
 
 # Drag floating windows by holding down $mod and left mouse button.
 # Resize them with right mouse button + $mod.
@@ -157,17 +155,11 @@ mode "MOVE_RESIZE" {
     bindsym k move up 20 px
     bindsym j move down 20 px
 
-    # Resize (ALT -> Mod1)
-    bindsym Mod1+h resize shrink width 20 px
-    bindsym Mod1+l resize grow width 20 px
-    bindsym Mod1+k resize shrink height 20 px
-    bindsym Mod1+j resize grow height 20 px
-
-    # Combined Move/Resize (SHIFT)
-    bindsym Shift+h move left 20 px; resize grow width 20 px
-    bindsym Shift+l move right 20 px; resize shrink width 20 px
-    bindsym Shift+k move up 20 px; resize grow height 20 px
-    bindsym Shift+j move down 20 px; resize shrink height 20 px
+    # Resize (SHIFT)
+    bindsym Shift+h resize shrink width 20 px
+    bindsym Shift+l resize grow width 20 px
+    bindsym Shift+k resize shrink height 20 px
+    bindsym Shift+j resize grow height 20 px
 
     # Exit Mode
     bindsym Escape mode "default"

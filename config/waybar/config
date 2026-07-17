@@ -90,7 +90,7 @@
     "on-click": "alacritty --class=Wiremix -e wiremix",
     "on-click-right": "pamixer -t",
     "tooltip-format": "Playing at {volume}%",
-    "scroll-step": 5,
+    "scroll-step": 1,
     "format-muted": "󰝟",
     "format-icons": {
       "default": ["", "", ""]

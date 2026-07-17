@@ -1,0 +1,71 @@
+#!/usr/bin/env bash
+# Media (playerctl) control with mako notification feedback.
+# Replaces swayosd-client --playerctl.
+#
+# Subcommands:
+#   next       next track
+#   prev       previous track
+#   toggle     play / pause
+#   stop       stop
+#
+# Reads metadata via `playerctl metadata` and shows "Artist - Title" + status icon.
+
+set -euo pipefail
+
+notify() { command -v notify-send >/dev/null && notify-send -a "media" -h "string:x-canonical-private-synchronous:media" "$@" || true; }
+
+# Read metadata safely; may return empty if no player is running.
+meta() {
+    local fmt="$1"
+    playerctl metadata --format "$fmt" 2>/dev/null || true
+}
+
+status_icon() {
+    local st="${1:-}"
+    case "$st" in
+        Playing) printf '▶' ;;
+        Paused)  printf '⏸' ;;
+        Stopped) printf '⏹' ;;
+        *)       printf '♪' ;;
+    esac
+}
+
+case "${1:-}" in
+    next)
+        playerctl next >/dev/null 2>&1 || { notify "Media" "No active player"; exit 0; }
+        artist=$(meta '{{ artist }}')
+        title=$(meta '{{ title }}')
+        track="$artist - $title"
+        [[ -z "$artist" || -z "$title" ]] && track=$(meta '{{ markupTitle }}')
+        icon=$(status_icon "$(meta '{{ status }}')")
+        notify "$icon  Next" "$track"
+        ;;
+    prev)
+        playerctl previous >/dev/null 2>&1 || { notify "Media" "No active player"; exit 0; }
+        artist=$(meta '{{ artist }}')
+        title=$(meta '{{ title }}')
+        track="$artist - $title"
+        [[ -z "$artist" || -z "$title" ]] && track=$(meta '{{ markupTitle }}')
+        icon=$(status_icon "$(meta '{{ status }}')")
+        notify "$icon  Previous" "$track"
+        ;;
+    toggle)
+        playerctl play-pause >/dev/null 2>&1 || { notify "Media" "No active player"; exit 0; }
+        st=$(meta '{{ status }}')
+        artist=$(meta '{{ artist }}')
+        title=$(meta '{{ title }}')
+        track="$artist - $title"
+        [[ -z "$artist" || -z "$title" ]] && track=$(meta '{{ markupTitle }}')
+        icon=$(status_icon "$st")
+        notify "$icon  $st" "$track"
+        ;;
+    stop)
+        playerctl stop >/dev/null 2>&1 || true
+        notify "⏹  Stopped" ""
+        ;;
+    -h|--help|help|"")
+        sed -n '2,17p' "$0"
+        ;;
+    *)
+        echo "media: unknown subcommand: $1  (try --help)" >&2; exit 1 ;;
+esac

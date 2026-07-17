@@ -49,7 +49,7 @@
 | Wofi | ❌ drop | You bind it **nowhere**; everything uses fuzzel. Pick one → fuzzel. |
 | Fuzzel | 🖥️ keep (and **add to installer**) | Not currently installed by any script despite being bound everywhere. |
 | Mako | 🖥️ keep | Replace broken tracked symlink with real `include ~/.dots/current/theme/mako.ini`. |
-| swayosd | 🖥️ keep | — |
+| swayosd | ❌ drop | OS-level OSD overlay replaced by `notify-send` (mako) for volume/brightness/media/layout feedback. See §14. |
 | hypridle | 🔧 → `swayidle` | Already in `default/sway/autostart`. Drop hypridle config. |
 | hyprlock | 🔧 → `swaylock` | Password-only (fingerprint unlock dropped — see §9). |
 
@@ -279,7 +279,7 @@ paru -S --needed mariadb-libs postgresql-libs
 ### 🖥️ desktop add-on
 ```
 paru -S --needed sway swaylock swayidle swaybg \
-  waybar fuzzel mako swayosd \
+  waybar fuzzel mako \
   alacritty yazi btop \
   brightnessctl playerctl wiremix wireplumber pipewire \
   wl-clip-persist cliphist \
@@ -476,3 +476,96 @@ You asked *why* I flagged the key filename. Honest reason + why your instinct to
 - `.gitignore` adds `ssh/config` defensively in case you later symlink something.
 
 No information is lost — your local `~/.ssh/config` on each machine stays as-is; it just stops being tracked.
+
+---
+
+## 12. Screenshot pipeline (grim + slurp + wl-copy + swappy)
+
+**Before:** four inline `bindsym` lines in `default/sway/bindings`, each calling `grim -g "$(slurp)" - | wl-copy` directly. Three problems:
+
+1. `wl-copy` without `-t image/png` defaults to `text/plain` for some apps — pasting into Discord/Slack/Telegram produces a text blob, not the image. The fix is to pass `-t image/png` *with a file path* (`wl-copy < file.png`), which wl-clipboard sniffs to `image/png`.
+2. No notification feedback — pressing Print silently succeeds/fails.
+3. No file save on `Print` / `Shift+Print`, no swappy annotate, no color picker, no active-window capture, no delay.
+
+**After:** single helper script `bin/script-screenshot` with subcommands, called from bindings:
+
+| Sub | What |
+|---|---|
+| `region`   | slurp region → save to `~/Pictures/screenshots/<ts>.png` + wl-copy |
+| `output`   | full active output → save + wl-copy |
+| `window`   | focused window (via `swaymsg -t get_tree \| jq`) → save + wl-copy |
+| `clip`     | slurp region → wl-copy only (no file) |
+| `color`    | `slurp -p` → `magick … %[pixel:p{0,0}]` → hex → wl-copy + notify |
+| `annotate` | slurp region → `swappy -f -` overlay → save + wl-copy |
+| `delay N <sub>` | sleep N seconds, then run sub |
+
+Bindings (`default/sway/bindings`) — deliberately kept to two keys, the
+others are still available as subcommands on the script:
+
+```
+bindsym $mod+s        exec script-screenshot region    # slurp → save + clipboard
+bindsym $mod+Shift+s  exec script-screenshot annotate  # slurp → swappy → save + clipboard
+```
+
+**New packages** added to `install/desktop.sh` (`Media / hardware` section):
+- `swappy` — annotation/crop overlay
+- `libnotify` — provides `notify-send` for feedback
+- `imagemagick` — `magick` parses `%[pixel:p{0,0}]` for color picker
+- `jq` — extract focused window rect from `swaymsg -t get_tree`
+
+**Why a script, not just longer bindsym lines:**
+- Two `~/.dots` systems (current Hyprland box + clean Sway box) need identical screenshot behavior.
+- swappy's `-f -` stdin mode makes annotation a one-liner inside the script but a mess inline.
+- Color-picker pipe (`grim | magick | grep | wl-copy`) is non-trivial to debug from a binding; the script surfaces `notify-send` errors so failures are visible.
+- Subcommand pattern (`region`, `output`, `window`, …) keeps the binding table one-line-per-key, which `script-show-keybindings` already formats nicely.
+
+**Reinstall:** `~/.dots/install/desktop.sh` is idempotent (paru `--needed`) — re-run after pulling to pick up `swappy/libnotify/imagemagick/jq` without re-installing everything.
+
+---
+
+## 13. Pi coding-agent setup (pi-* packages)
+
+Three public repos under the `pi-` namespace are the user-facing surface of pi extensions/skills. Installed globally:
+
+| Repo | Cloned to | Type |
+|---|---|---|
+| [`djordjeveljkovic/pi-list-picker`](https://github.com/djordjeveljkovic/pi-list-picker) | `~/.pi/agent/extensions/list-picker/` | TUI component (npm package, peer-dep for skill-manager) |
+| [`djordjeveljkovic/pi-skill-manager`](https://github.com/djordjeveljkovic/pi-skill-manager) | `~/.pi/agent/extensions/skill-manager/` | Extension: `/skills`, `/skills:list`, `/skills:manage`, `skill_list`/`skill_toggle`/`skill_reload` tools |
+| [`djordjeveljkovic/pi-skills-library`](https://github.com/djordjeveljkovic/pi-skills-library) | `~/.pi/agent/skills-library/` | 85 `SKILL.md` files across 10 collections (playwright, docmd, axi, toon-format, ui-ux-pro-max, find-skills, skill-manager, aif-collection, books-collection, ruflo-collection) |
+
+**Why this lives outside `~/.dots`:** pi reads from `~/.pi/agent/` (XDG-style, per-user agent home). Keeping the repos there — owned by pi, not symlinked from `~/.dots/config/pi/` — means `git pull` inside each repo updates the live install without re-running the dotfiles installer.
+
+**Install procedure** (idempotent — re-running is safe):
+
+```bash
+mkdir -p ~/.pi/agent/extensions
+gh repo clone djordjeveljkovic/pi-list-picker      ~/.pi/agent/extensions/list-picker
+gh repo clone djordjeveljkovic/pi-skill-manager    ~/.pi/agent/extensions/skill-manager
+gh repo clone djordjeveljkovic/pi-skills-library   ~/.pi/agent/skills-library
+
+(cd ~/.pi/agent/extensions/skill-manager && npm install)
+```
+
+`settings.json` additions (auto-merged if missing):
+
+```json
+{
+  "extensions": [
+    "extensions/skill-manager",
+    "extensions/list-picker/extension.ts"
+  ]
+}
+```
+
+After install, `/reload` (or restart pi) activates:
+
+| Command | Purpose |
+|---|---|
+| `/skills` | compact list of enabled skills |
+| `/skills:list` | TUI: browse + toggle + filter |
+| `/skills:manage` | enable/disable/all/reset menu |
+| `/skills:enable <name>` / `/skills:disable <name>` | one-shot |
+| `/skills:enable-all` / `/skills:reset` | bulk |
+| `/skills:status` | library path + state file + counts |
+
+The skill library is in `~/.pi/agent/skills-library/`, managed by `pi-skill-manager`'s state file at `~/.pi/agent/skill-state.json`.

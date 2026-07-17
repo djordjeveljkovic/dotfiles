@@ -2,7 +2,7 @@
 # Sway Configuration
 # -----------------------------------------------------
 
-set $mod Mod1
+set $mod Mod4
 
 # Variables
 set $terminal alacritty
