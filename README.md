@@ -107,8 +107,16 @@ Configs in `config/xdg-desktop-portal/`:
   the `wlr` backend so portal autodetect can't lose the race to `gtk`
   (which returns empty buffers on sway). Everything else (file picker,
   etc.) stays on `gtk`.
-- `wlr-portal.conf` — sets the screencast chooser to `simple` (slurp across
-  all outputs, pick output or region) and caps framerate at 60 fps.
+- `wlr-portal.conf` — sets `chooser_type=custom` and points
+  `chooser_cmd` at `~/.dots/bin/script-share-chooser`, which:
+  - For **Entire screen**: pops a fuzzel list of available outputs (no
+    slurp drag-region). Click one.
+  - For **Window**: pops a fuzzel list of toplevels with `[wsN]` labels
+    pulled from `swaymsg -t get_tree`. This is important because
+    wlr-portal's foreign-toplevel protocol on sway only returns the
+    current workspace's windows — the custom chooser bypasses that by
+    walking the sway tree directly, so you can share any window on any
+    workspace. Caps framerate at 60 fps via `[screencast] max_fps=60`.
 
 Sway already exports `WAYLAND_DISPLAY` + `XDG_CURRENT_DESKTOP=sway` via
 `dbus-update-activation-environment` in `default/sway/autostart`, which is

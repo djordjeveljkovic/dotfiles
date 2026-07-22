@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# script-share-chooser — custom chooser for xdg-desktop-portal-wlr.
+#
+# Set as chooser_cmd in ~/.config/xdg-desktop-portal/wlr-portal.conf with
+# chooser_type=custom. wlr-portal pipes the available options to this
+# script's stdin (one per line) and reads the user's pick from stdout
+# (verbatim — the line must match one of the input lines exactly).
+#
+# Format from wlr-portal:
+#   monitor selection:  <output_name>\t<output_description>
+#   window selection:   <toplevel_id>\t<app_id>\t<title>
+#
+# We auto-detect the type by field count of the first line, then:
+#
+#   Monitor — just pipe through fuzzel as-is. Output: the picked monitor
+#             line verbatim.
+#
+#   Window  — annotate each row with its workspace name (so you can tell
+#             "Alacritty on ws3" from "Alacritty on ws4"), pipe to fuzzel,
+#             then look up the original input line by toplevel_id and
+#             output that verbatim. The foreign-toplevel protocol used
+#             by wlr-portal does not include workspace info, and on sway
+#             the toplevel list it produces seems to be limited to the
+#             current workspace — this script bypasses both by pulling
+#             the full tree from `swaymsg -t get_tree`.
+#
+# We key the workspace lookup by (app_id, title), NOT app_id alone —
+# otherwise multiple windows of the same app (e.g. 3 Alacritty instances
+# on different workspaces) all get the same ws label.
+#
+# Exit codes: 0 on pick, 1 on cancel (fuzzel returns 1 on Esc), other on
+# real failure.
+
+set -euo pipefail
+
+# --- Read the input wlr-portal piped to us ---
+mapfile -t raw_lines
+# Drop empty lines; wlr-portal shouldn't send any but some pipe states can
+lines=()
+for l in "${raw_lines[@]}"; do
+    [[ -n "$l" ]] && lines+=("$l")
+done
+[[ ${#lines[@]} -eq 0 ]] && exit 1
+
+# --- Detect: monitor lines have 2 fields, window lines have 3 ---
+sample="${lines[0]}"
+fields=$(printf '%s' "$sample" | awk -F'\t' '{print NF}')
+
+if [[ "$fields" -eq 2 ]]; then
+    # ----------------------------------------------------------------
+    # Monitor — straight pass-through to fuzzel
+    # ----------------------------------------------------------------
+    selected=$(printf '%s\n' "${lines[@]}" \
+        | fuzzel --dmenu --prompt="Share screen") || exit 1
+    printf '%s\n' "$selected"
+    exit 0
+fi
+
+# ----------------------------------------------------------------
+# Window — enrich with workspace labels
+# ----------------------------------------------------------------
+
+# Build a list of {app, title, ws} from sway's full tree. Workspaces are
+# ancestors, not descendants, of the window nodes — so a flat `recurse`
+# won't find them; we need foreach state to track the current ws.
+#
+# Output is newline-delimited JSON objects, one per window. We use jq
+# to do the per-row lookup below so we don't have to maintain a bash
+# associative array keyed on a (app, title) compound.
+window_index=$(swaymsg -t get_tree 2>/dev/null | jq -c '
+    foreach recurse(.nodes[]?, .floating_nodes[]?) as $n (
+        {ws: null};
+        if $n.type == "workspace" then {ws: $n.name} else . end;
+        if $n.app_id and .ws != null and $n.name then
+            {app: $n.app_id, title: $n.name, ws: .ws}
+        else empty end
+    )' 2>/dev/null || echo "")
+
+# --- Annotate each input row with [ws] label ---
+annotated=()             # fuzzel-display lines
+declare -A id_to_input   # toplevel_id (string) -> original input line
+
+for line in "${lines[@]}"; do
+    id=$(printf '%s' "$line"   | cut -f1)
+    app=$(printf '%s' "$line"  | cut -f2)
+    title=$(printf '%s' "$line" | cut -f3)
+
+    # Look up the workspace for this (app, title) pair. If the foreign-
+    # toplevel protocol gave us an app_id/title that doesn't match anything
+    # in the sway tree (because, e.g., it was a foreign-toplevel from a
+    # different compositor instance), we fall back to "?".
+    ws=$(printf '%s' "$window_index" \
+        | jq -r --arg a "$app" --arg t "$title" \
+            'select(.app == $a and .title == $t) | .ws' \
+        2>/dev/null | head -1)
+
+    if [[ -z "$ws" || "$ws" == "null" ]]; then
+        ws="?"
+    fi
+
+    annotated+=("$id	$app	[ws$ws] $title")
+    id_to_input["$id"]="$line"
+done
+
+selected=$(printf '%s\n' "${annotated[@]}" \
+    | fuzzel --dmenu --prompt="Share window") || exit 1
+
+# Pull out the toplevel_id (first field) of the annotated pick, then
+# look up the ORIGINAL input line for that id and return it verbatim.
+picked_id=$(printf '%s' "$selected" | cut -f1)
+if [[ -n "${id_to_input[$picked_id]:-}" ]]; then
+    printf '%s\n' "${id_to_input[$picked_id]}"
+else
+    # Shouldn't happen, but bail with the raw pick if it does — wlr-portal
+    # will reject it and that's a better signal than silent exit.
+    printf '%s\n' "$selected"
+fi
