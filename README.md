@@ -35,7 +35,7 @@ git clone git@github.com:djordjeveljkovic/dotfiles.git ~/.dots
 │   ├── desktop.sh  server.sh                                       # profile
 │   ├── mimetype.sh                                                 # sourced by desktop.sh
 │   └── opt-{nvidia,plymouth,bluetooth,printer,android,             # opt leaves
-│              flutter,antigravity,zed,ollama}.sh                   #   (--flutter -> --android)
+│              flutter,antigravity,zed,ollama,screen-share}.sh      #   (--flutter -> --android)
 ├── bin/                    # sway-native helper scripts
 ├── lib/helpers.sh          # shared helpers for script-manage-*
 ├── config/                 # symlinked into ~/.config/ at install time
@@ -56,7 +56,7 @@ git clone git@github.com:djordjeveljkovic/dotfiles.git ~/.dots
 ## Opt-in flags (each standalone, except `--flutter`→`--android`)
 
 `--nvidia` · `--plymouth` · `--bluetooth` · `--printer` ·
-`--android` · `--flutter` · `--antigravity` · `--zed` · `--ollama`
+`--android` · `--flutter` · `--antigravity` · `--zed` · `--ollama` · `--screen-share`
 
 ## Secrets
 
@@ -88,6 +88,33 @@ Bindings in `default/sway/bindings`, both funneled through
 `region`, `output`, `window`, `clip`, `color`, `annotate`, `delay N <sub>`
 subcommands — run `script-screenshot --help` or call it from the terminal
 for the others.
+
+## Screen sharing
+
+`install/opt-screen-share.sh` installs the standard Wayland stack so apps
+(Chrome, Discord, OBS, Firefox) can capture and share the screen in video
+calls:
+
+```
+xdg-desktop-portal         # router / dbus interface
+xdg-desktop-portal-wlr     # wlroots (sway) backend — Screenshot + ScreenCast
+xdg-desktop-portal-gtk     # file/app chooser, notifications
+```
+
+Configs in `config/xdg-desktop-portal/`:
+
+- `portals.conf` — pins `Screenshot` + `ScreenCast` (note the capital C) to
+  the `wlr` backend so portal autodetect can't lose the race to `gtk`
+  (which returns empty buffers on sway). Everything else (file picker,
+  etc.) stays on `gtk`.
+- `wlr-portal.conf` — sets the screencast chooser to `simple` (slurp across
+  all outputs, pick output or region) and caps framerate at 60 fps.
+
+Sway already exports `WAYLAND_DISPLAY` + `XDG_CURRENT_DESKTOP=sway` via
+`dbus-update-activation-environment` in `default/sway/autostart`, which is
+all the env the portal needs — no sway restart required. The script just
+installs packages, links configs, and restarts the portal so the new
+backend takes effect.
 
 ## Pi coding-agent packages
 
