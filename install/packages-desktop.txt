@@ -1,0 +1,110 @@
+# Curated desktop package list for ~/.dots.
+# Loaded by install/desktop.sh and install/hyprlandia.sh.
+# One package per line. Comments (#) and blank lines are ignored.
+# Packages are installed via yay (which uses pacman transparently for
+# repos). This list intentionally excludes user-specific projects,
+# databases, browsers other than the ones needed by bindings, and
+# anything not directly required by the desktop configuration.
+
+# --- Hyprland stack ---
+hyprland
+uwsm
+hypridle
+hyprlock
+hyprpaper
+hyprpicker
+hyprshot
+hyprsunset
+hyprland-qtutils
+polkit-gnome
+wofi
+waybar
+mako
+swayosd
+swaybg
+swayidle
+swaylock
+swaync
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-gtk
+
+# --- Terminals and shells ---
+alacritty
+ghostty
+foot
+kitty
+
+# --- Theme / appearance ---
+kvantum-qt5
+gnome-themes-extra
+adwaita-cursors
+adwaita-icon-theme
+
+# --- Files and TUI tools ---
+yazi
+btop
+impala
+wiremix
+bluetui
+calcure
+lazydocker-bin
+cliphist
+wl-clipboard
+ffmpegthumbnailer
+
+# --- Hardware control ---
+brightnessctl
+playerctl
+pamixer
+wireplumber
+
+# --- Shell and core CLI ---
+tmux
+fzf
+fd
+eza
+ripgrep
+zoxide
+bat
+mise
+bash-completion
+less
+man-db
+
+# --- Notifications / portals / fonts ---
+libnotify
+fontconfig
+noto-fonts
+noto-fonts-emoji
+ttf-firacode-nerd
+ttf-ubuntu-mono-nerd
+ttf-dejavu
+
+# --- Desktop launchers / browsers / apps referenced by keybindings ---
+google-chrome
+steam
+wl-clip-persist
+imv
+mpv
+postman
+
+# --- System utilities required by the config / scripts ---
+upower
+sof-firmware
+alsa-firmware
+alsa-ucm-conf
+pipewire
+pipewire-pulse
+pipewire-alsa
+pipewire-jack
+wireplumber
+networkmanager
+iwd
+network-manager-applet
+blueberry
+bluez
+bluez-utils
+bluez-obex
+cups
+cups-pdf
+cups-filters
