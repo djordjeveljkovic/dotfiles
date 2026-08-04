@@ -36,15 +36,25 @@ bar() {
 dev_args=()
 [[ -n "$DEVICE" ]] && dev_args=(--device="$DEVICE")
 
+# Read the current brightness as a percentage. `brightnessctl get` returns
+# a raw value; `info` (or `-m info`) returns a percentage we can parse.
+read_pct() {
+    local line
+    line=$(brightnessctl "${dev_args[@]}" -m info 2>/dev/null) || return 1
+    printf '%s' "$line" | awk -F',' 'NR==1 {gsub(/%/,"",$4); print $4}'
+}
+
 case "${1:-}" in
     up)
         brightnessctl set "${STEP}%+" "${dev_args[@]}" >/dev/null
-        pct=$(brightnessctl get "${dev_args[@]}" | awk -F'[()%]' '{print $2}')
+        pct=$(read_pct)
+        [[ -z "$pct" ]] && pct=$(brightnessctl info "${dev_args[@]}" | awk -F'[()]' '/Current brightness/{print $2}' | tr -d '%')
         notify "${pct}%  $(bar "$pct")  Brightness:" -h int:value:"$pct"
         ;;
     down)
         brightnessctl set "${STEP}%-" "${dev_args[@]}" >/dev/null
-        pct=$(brightnessctl get "${dev_args[@]}" | awk -F'[()%]' '{print $2}')
+        pct=$(read_pct)
+        [[ -z "$pct" ]] && pct=$(brightnessctl info "${dev_args[@]}" | awk -F'[()]' '/Current brightness/{print $2}' | tr -d '%')
         notify "${pct}%  $(bar "$pct")  Brightness:" -h int:value:"$pct"
         ;;
     -h|--help|help|"")

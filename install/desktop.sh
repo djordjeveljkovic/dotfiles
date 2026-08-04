@@ -50,7 +50,7 @@ echo "==> Compositor adapter: $DOTS_COMPOSITOR"
 paru -S --noconfirm --needed \
     waybar mako polkit-gnome \
     wl-clipboard wl-clip-persist cliphist \
-    grim slurp swappy swayosd \
+    grim slurp swappy \
     libnotify imagemagick jq
 
 # PipeWire audio + media keys
