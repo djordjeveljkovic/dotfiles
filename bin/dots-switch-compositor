@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+# ~/.dots/bin/dots-switch-compositor
+#
+# Switch the active Wayland compositor between Sway and Hyprland on the
+# next login. After running this script (and the logout step it offers),
+# TTY1's auto-login + dots-session will start the new adapter instead
+# of the current one.
+#
+# What it does:
+#   1. Detect the running compositor (sway / hyprland).
+#   2. Pick the *other* one (or accept an explicit argument).
+#   3. Run install/compositor-<target>.sh to make sure the package set
+#      for that adapter is installed. Both scripts are idempotent
+#      (paru --needed) so a no-op when everything is already there.
+#   4. Update ~/.config/dots/compositor (the marker that
+#      dots_session + install/desktop.sh read).
+#   5. Optionally log out of the current session.
+#
+# Usage:
+#   dots-switch-compositor             # toggle (sway ↔ hyprland)
+#   dots-switch-compositor sway        # switch to Sway explicitly
+#   dots-switch-compositor hyprland    # switch to Hyprland explicitly
+
+set -euo pipefail
+
+DOTS="${DOTS:-$HOME/.dots}"
+MARKER="${XDG_CONFIG_HOME:-$HOME/.config}/dots/compositor"
+
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
+
+# What is actually running RIGHT NOW. dots_compositor's last-resort default
+# (sway) is fine here: if nothing is running, we still want a sensible
+# "current" so the toggle has somewhere to start from.
+current="$(dots_compositor)"
+target="${1:-}"
+
+if [[ -z "$target" ]]; then
+    case "$current" in
+        sway)     target="hyprland" ;;
+        hyprland) target="sway" ;;
+        *)        target="sway" ;;
+    esac
+    if command -v gum >/dev/null; then
+        # Confirm/correct before we touch anything.
+        chosen=$(gum choose sway hyprland --header "Currently $current — switch to?")
+        [[ -n "$chosen" ]] && target="$chosen"
+    fi
+fi
+
+case "$target" in
+    sway|hyprland) ;;
+    *) echo "dots-switch-compositor: unknown target '$target' (expected sway or hyprland)" >&2; exit 1 ;;
+esac
+
+if [[ "$target" == "$current" ]]; then
+    echo "Already on $target; nothing to do."
+    exit 0
+fi
+
+echo "==> $current → $target"
+
+# Make sure the target compositor's packages are installed. Both
+# compositor-*.sh are idempotent thanks to 'paru -S --needed'.
+case "$target" in
+    sway)
+        echo "==> Installing Sway package set (idempotent)"
+        "$DOTS/install/compositor-sway.sh"
+        ;;
+    hyprland)
+        echo "==> Installing Hyprland package set (idempotent)"
+        "$DOTS/install/compositor-hyprland.sh"
+        ;;
+esac
+
+# The compositor-* installer already writes the marker; re-write defensively
+# in case the user is running a stripped-down tree that did not.
+mkdir -p "$(dirname "$MARKER")"
+printf '%s\n' "$target" > "$MARKER"
+echo "==> Adapter marker: $MARKER → $target"
+
+# Ask before tearing down the running session.
+logout=true
+if command -v gum >/dev/null; then
+    if ! gum confirm "Log out of $current now?"; then
+        logout=false
+    fi
+else
+    read -r -p "Log out of $current now? [y/N] " ans || true
+    [[ "${ans,,}" == "y" || "${ans,,}" == "yes" ]] || logout=false
+fi
+
+if [[ "$logout" != "true" ]]; then
+    echo "Not logging out. Run this script again, or log out manually,"
+    echo "and the next session will start $target."
+    exit 0
+fi
+
+echo "==> Logging out of $current"
+case "$current" in
+    sway)     swaymsg exit ;;
+    hyprland) hyprctl dispatch exit ;;
+esac
