@@ -220,7 +220,12 @@ that pulls in:
 
 ### Media keys
 Volume / mute / mic / brightness / play / next / prev all routed through
-`swayosd-client`. `ALT+SHIFT_L` cycles XKB layout and shows a swayosd hint.
+`bin/script-audio`, `bin/script-brightness`, `bin/script-media` —
+each calls `wpctl` / `brightnessctl` / `playerctl` and shows an OSD
+notification via mako (no swayosd). `ALT+SHIFT_L` cycles XKB layout
+through `bin/script-notify-layout`, which dispatches via
+`dots_compositor_cmd` (swaymsg / hyprctl) and shows a mako notification
+of the new keymap.
 
 ### Screenshots & picker
 - `PRINT` → region, `SHIFT+PRINT` → window, `CTRL+PRINT` → output
