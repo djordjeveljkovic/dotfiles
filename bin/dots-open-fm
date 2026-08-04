@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# ~/.dots/bin/dots-open-fm
+#
+# Open a directory in yazi inside a floating alacritty window.
+# This script is the Exec target of config/applications/yazi.desktop,
+# which is registered as the default xdg-open handler for
+# inode/directory. Apps that call xdg-open on a directory (Chrome's
+# "Show in folder", Firefox's download manager, Telegram's open-in-folder,
+# etc.) end up here.
+#
+# The path is passed by xdg-open as the first positional argument.
+# yazi accepts a starting directory as its first argument, so we forward
+# it directly. If the path is not a directory (e.g. a single file inside
+# a folder), we walk up to the nearest parent directory.
+
+set -euo pipefail
+
+DOTS="${DOTS:-$HOME/.dots}"
+
+# Pick the terminal: prefer alacritty, fall back to whatever $terminal
+# points to, then any terminal on PATH.
+if command -v alacritty >/dev/null 2>&1; then
+    TERMINAL="alacritty"
+elif [[ -n "${terminal:-}" ]] && command -v "${terminal}" >/dev/null 2>&1; then
+    TERMINAL="$terminal"
+elif command -v ghostty >/dev/null 2>&1; then
+    TERMINAL="ghostty"
+else
+    echo "dots-open-fm: no terminal emulator found" >&2
+    exit 1
+fi
+
+target="${1:-$HOME}"
+
+# If the target is a file (xdg-open on a file path), open the parent
+# directory. yazi will start there and the user can navigate.
+if [[ ! -d "$target" ]]; then
+    if [[ -e "$target" ]]; then
+        target="$(dirname -- "$target")"
+    else
+        target="$HOME"
+    fi
+fi
+
+# Launch yazi inside a FloatingWindow-classed alacritty. Both sway's
+# default config and hyprland's windows.conf recognise the
+# com.x.FloatingWindow class and float+center the window, so the yazi
+# TUI lands in the same spot as the keybinding-launched version.
+exec "$TERMINAL" \
+    --class=com.x.FloatingWindow \
+    -o font.size=12 \
+    -e yazi "$target"

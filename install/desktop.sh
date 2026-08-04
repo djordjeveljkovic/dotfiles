@@ -79,6 +79,24 @@ paru -S --noconfirm --needed google-chrome
 source "$DOTS/install/mimetype.sh"
 
 # ---------------------------------------------------------------------------
+# yazi as the default file manager
+# ---------------------------------------------------------------------------
+# Make sure the desktop entry is registered with xdg-open so any app
+# (Chrome's "Show in folder", Firefox download manager, etc.) ends up
+# opening a FloatingWindow-classed alacritty running yazi. The desktop
+# entry itself lives at config/applications/yazi.desktop and is
+# symlinked into ~/.local/share/applications/ by the manifest deploy.
+if command -v xdg-mime >/dev/null 2>&1; then
+    xdg-mime default yazi.desktop inode/directory >/dev/null 2>&1 || true
+    # Refresh the desktop + mime caches so the new entry is discoverable
+    # by apps that consult them directly (Chrome, GTK file-chooser, etc.).
+    command -v update-desktop-database >/dev/null \
+        && update-desktop-database -q "$HOME/.local/share/applications" 2>/dev/null || true
+    command -v update-mime-database >/dev/null \
+        && update-mime-database "$HOME/.local/share/mime" 2>/dev/null || true
+fi
+
+# ---------------------------------------------------------------------------
 # Waybar workspace module: pick the right one for the active compositor
 # ---------------------------------------------------------------------------
 "$DOTS/bin/script-apply-waybar-compositor" || true

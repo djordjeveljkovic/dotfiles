@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Yazi File Manager
+GenericName=File Manager
+Comment=Browse the filesystem in a terminal yazi TUI
+# Exec runs the wrapper that opens a FloatingWindow alacritty running
+# yazi at the directory xdg-open hands us. %f is the only argument
+# Chrome / Firefox / Telegram pass when invoking xdg-open on a folder.
+Exec=/home/usrtmp/.dots/bin/dots-open-fm %f
+Icon=org.gnome.Nautilus
+Terminal=false
+Categories=System;FileManager;Utility;
+MimeType=inode/directory;
+Keywords=file manager;browser;yazi;tui;
+StartupNotify=true
+StartupWMClass=Alacritty
