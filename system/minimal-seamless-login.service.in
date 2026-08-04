@@ -1,0 +1,24 @@
+[Unit]
+Description=Dots Minimal Seamless Auto-Login
+Documentation=file://%h/.dots/current_setup.md
+Conflicts=getty@tty1.service
+After=systemd-user-sessions.service getty@tty1.service plymouth-quit.service systemd-logind.service
+PartOf=graphical.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/seamless-login uwsm start -- hyprland.desktop
+Restart=always
+RestartSec=2
+User=__USER__
+TTYPath=/dev/tty1
+TTYReset=yes
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal+console
+PAMName=login
+
+[Install]
+WantedBy=graphical.target
