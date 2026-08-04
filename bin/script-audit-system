@@ -1,0 +1,192 @@
+#!/usr/bin/env bash
+# Audit ~/.dots ownership, integration, and live service state.
+# Read-only: never modifies the system. Exit status reflects severity.
+
+set -uo pipefail
+
+DOTS_DIR="${DOTS_DIR:-$HOME/.dots}"
+MANIFEST="$DOTS_DIR/manifest/desktop.conf"
+AUDIT_LOG="$DOTS_DIR/.pi/audit-$(date +%Y%m%d-%H%M%S).log"
+mkdir -p "$(dirname "$AUDIT_LOG")"
+
+log() { printf '%s\n' "$*"; }
+report_log() { printf '%s\n' "$*" >>"$AUDIT_LOG"; }
+
+errs=0
+warns=0
+ok=0
+
+log "==> dots audit @ $(date -Iseconds)"
+log "==> dots dir: $DOTS_DIR"
+log "==> manifest: $MANIFEST"
+log "==> log:      $AUDIT_LOG"
+log
+{
+  echo "dots audit @ $(date -Iseconds)"
+  echo "dots dir: $DOTS_DIR"
+  echo
+} >"$AUDIT_LOG"
+
+missing=0
+external=0
+absent=0
+if [[ -f $MANIFEST ]]; then
+  log "==> Managed destinations"
+  while read -r kind live src _; do
+    [[ -z $kind || $kind == \#* ]] && continue
+    live_expanded="$HOME/${live/\$HOME/}"
+    src_expanded="$DOTS_DIR/${src/\$HOME/$HOME}"
+    if [[ ! -e $live_expanded && ! -L $live_expanded ]]; then
+      log "  [MISS]  $live_expanded"
+      report_log "MISS $live_expanded"
+      missing=$((missing + 1))
+      errs=$((errs + 1))
+      continue
+    fi
+    case $kind in
+      link)
+        target=$(readlink -f "$live_expanded" 2>/dev/null || true)
+        if [[ -z $target ]]; then
+          log "  [BROKEN] $live_expanded"
+          report_log "BROKEN $live_expanded"
+          absent=$((absent + 1))
+          errs=$((errs + 1))
+        elif [[ $target != "$DOTS_DIR"* ]]; then
+          log "  [EXT]   $live_expanded -> $target"
+          report_log "EXT $live_expanded $target"
+          external=$((external + 1))
+          warns=$((warns + 1))
+        else
+          log "  [OK]    $live_expanded"
+          ok=$((ok + 1))
+        fi
+        ;;
+      file)
+        log "  [FILE]  $live_expanded"
+        ok=$((ok + 1))
+        ;;
+    esac
+  done <"$MANIFEST"
+  log
+fi
+
+# Required commands
+log "==> Required commands"
+required=(gsettings hyprctl hyprpaper hypridle hyprlock hyprshot hyprsunset waybar wofi mako fuzzel swayosd-server alacritty btop)
+for cmd in "${required[@]}"; do
+  if command -v "$cmd" >/dev/null 2>&1; then
+    pkg=$(pacman -Qo "$(command -v "$cmd")" 2>/dev/null | awk '{print $5}' || true)
+    log "  [OK]    $cmd ($pkg)"
+    ok=$((ok + 1))
+  else
+    log "  [MISS]  $cmd"
+    errs=$((errs + 1))
+  fi
+done
+log
+
+# Sourced include resolution
+log "==> Sourced includes (broken paths)"
+while IFS= read -r -d '' file; do
+  case $file in
+    *.conf|*.toml|*.json|*.jsonc|*.css|*.ini)
+      while IFS= read -r ref; do
+        [[ -z $ref ]] && continue
+        # Skip false-positive section/key names that look like paths.
+        case $ref in
+          *'*'*) continue ;;
+        esac
+        expanded=${ref//\$HOME/$HOME}
+        expanded=${expanded//\~/$HOME}
+        case $ref in
+          '$HOME'*|'~'*|'/'*) ;;
+          *) expanded="$DOTS_DIR/$ref" ;;
+        esac
+        if [[ ! -e $expanded ]]; then
+          log "  [MISS]  ${file#$DOTS_DIR/} -> $ref"
+          missing=$((missing + 1))
+          errs=$((errs + 1))
+        fi
+      done < <(grep -Eho '(source|include|general\.import|@import)[ =]+"[^"]+"' "$file" 2>/dev/null | sed -E 's/^[^"]*"([^"]+)".*$/\1/' | sort -u)
+      ;;
+  esac
+done < <(find "$DOTS_DIR/default" "$DOTS_DIR/config" "$DOTS_DIR/themes" "$DOTS_DIR/system" -type f -name '*.conf' -print0 2>/dev/null)
+log
+
+# Omarchy ownership in managed code
+log "==> Omarchy references in managed code (should be empty)"
+omarchy_refs=$(grep -RIl --exclude='script-audit-system' '\.config/omarchy\|/usr/local/bin/omarchy\|/omarchy/\|omarchy-' \
+  "$DOTS_DIR/bin" "$DOTS_DIR/config" "$DOTS_DIR/default" "$DOTS_DIR/system" 2>/dev/null || true)
+if [[ -n $omarchy_refs ]]; then
+  printf '  [WARN]  %s\n' $omarchy_refs
+  warns=$((warns + 1))
+else
+  log "  [OK]    none"
+  ok=$((ok + 1))
+fi
+log
+
+# Active services
+log "==> Enabled services (managed)"
+for s in minimal-seamless-login.service bluetooth.service iwd.service cups.service cups.path cups.socket; do
+  status=$(systemctl is-enabled "$s" 2>&1 || echo missing)
+  if [[ $status == enabled ]]; then
+    log "  [OK]    $s -> $status"
+    ok=$((ok + 1))
+  else
+    log "  [WARN]  $s -> $status"
+    warns=$((warns + 1))
+  fi
+done
+for s in omarchy-seamless-login.service getty@tty1.service; do
+  status=$(systemctl is-enabled "$s" 2>&1 || echo missing)
+  if [[ $status == disabled ]]; then
+    log "  [OK]    $s -> $status"
+    ok=$((ok + 1))
+  else
+    log "  [WARN]  $s -> $status (expected disabled)"
+    warns=$((warns + 1))
+  fi
+done
+if systemctl is-enabled display-manager.service 2>/dev/null | grep -q 'linked.*lemurs'; then
+  log "  [WARN]  display-manager.service -> lemurs (stale)"
+  warns=$((warns + 1))
+fi
+log
+
+# User timer
+log "==> User timers (managed)"
+for t in battery-monitor.timer time-notify.timer; do
+  status=$(systemctl --user is-enabled "$t" 2>&1 || echo missing)
+  if [[ $status == enabled ]]; then
+    log "  [OK]    $t -> $status"
+    ok=$((ok + 1))
+  else
+    log "  [WARN]  $t -> $status"
+    warns=$((warns + 1))
+  fi
+done
+log
+
+# Color scheme / theme state
+log "==> System color scheme"
+scheme=$(gsettings get org.gnome.desktop.interface color-scheme 2>/dev/null || echo "'default'")
+gtk=$(gsettings get org.gnome.desktop.interface gtk-theme 2>/dev/null || echo "'Adwaita'")
+log "  color-scheme: $scheme"
+log "  gtk-theme:    $gtk"
+active_target=$(readlink -f "$DOTS_DIR/current/theme" 2>/dev/null || echo none)
+log "  current/theme -> $active_target"
+log
+
+log "==> Summary"
+log "  OK:    $ok"
+log "  Warn:  $warns"
+log "  Error: $errs"
+log "  Missing managed destinations: $missing"
+log "  External symlinks:            $external"
+log "  Broken symlinks:              $absent"
+
+if (( errs > 0 )); then
+  exit 1
+fi
+exit 0

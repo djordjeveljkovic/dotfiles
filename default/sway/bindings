@@ -29,6 +29,7 @@ bindsym $mod+space exec fuzzel --lines 5
 bindsym $mod+Shift+space exec pkill -SIGUSR1 waybar
 bindsym $mod+Escape exec ~/.dots/bin/script-power
 bindsym $mod+n exec ~/.dots/bin/script-toggle-sunset
+bindsym $mod+Shift+n exec ~/.dots/bin/script-toggle-theme
 
 # Scripts & Info
 bindsym $mod+Control+i exec ~/.dots/bin/script-toggle-idle

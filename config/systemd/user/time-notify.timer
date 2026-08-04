@@ -1,0 +1,10 @@
+[Unit]
+Description=Trigger time notification every 15 minutes
+
+[Timer]
+# Run at minutes 0, 15, 30, and 45 of every hour
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

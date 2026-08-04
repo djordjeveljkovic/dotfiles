@@ -2,10 +2,10 @@
 export EDITOR="nvim"
 export SUDO_EDITOR="$EDITOR"
 
-# Docker/Podman (rootless socket — see install/podman.sh)
+# Podman (Docker-compatible) rootless socket — see install/podman.sh
 export DOCKER_HOST="unix:///run/user/$(id -u)/podman/podman.sock"
 
-# Screenshots saved by sway bindings (grim)
+# Screenshots saved by compositor bindings (grim/slurp; Hyprland: grimblast)
 export SCREENSHOT_DIR="$HOME/Pictures/screenshots/"
 mkdir -p "$SCREENSHOT_DIR" 2>/dev/null
 
@@ -26,7 +26,7 @@ if [[ -d "$HOME/.config/dots/envs.d" ]]; then
 fi
 
 # --- Secrets (gitignored, per-machine API keys) ---
-# Populate ~/.config/secrets.env with: export OPENROUTER_API_KEY="..." etc.
+# Populate ~/.config/secrets.env with: export MY_API_KEY="..." etc.
 if [[ -f "$HOME/.config/secrets.env" ]]; then
   source "$HOME/.config/secrets.env"
 fi

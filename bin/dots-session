@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# ~/.dots/bin/dots-session
+#
+# Universal session entrypoint. Selected at login by ~/.bash_profile
+# (or called directly by a display manager). It picks the right
+# compositor binary based on the active adapter and exec's it.
+#
+# Selection precedence:
+#   1. $DOTS_COMPOSITOR environment variable (explicit override)
+#   2. $HOME/.config/dots/compositor (written by install/compositor-*.sh)
+#   3. Detect $WAYLAND_DISPLAY or a running compositor process
+#
+# Adding a new compositor = drop a binary name into one of the
+# case branches; no other config has to change.
+
+set -euo pipefail
+
+DOTS_COMPOSITOR_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dots/compositor"
+
+detect_compositor() {
+    if [[ -n "${WAYLAND_DISPLAY:-}" ]]; then
+        case "$WAYLAND_DISPLAY" in
+            *sway*)    echo sway ;;
+            *hypr*)    echo hyprland ;;
+            *)         cat "$DOTS_COMPOSITOR_FILE" 2>/dev/null || echo sway ;;
+        esac
+    else
+        cat "$DOTS_COMPOSITOR_FILE" 2>/dev/null || echo sway
+    fi
+}
+
+compositor="${DOTS_COMPOSITOR:-$(detect_compositor)}"
+
+case "$compositor" in
+    sway)
+        exec sway
+        ;;
+    hyprland)
+        exec Hyprland
+        ;;
+    *)
+        echo "dots-session: unknown compositor '$compositor'" >&2
+        echo "Set DOTS_COMPOSITOR or write $DOTS_COMPOSITOR_FILE to {sway,hyprland}" >&2
+        exit 1
+        ;;
+esac

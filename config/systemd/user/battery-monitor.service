@@ -1,0 +1,6 @@
+[Unit]
+Description=Check battery levels and notify
+
+[Service]
+Type=oneshot
+ExecStart=%h/.dots/bin/script-battery-monitor

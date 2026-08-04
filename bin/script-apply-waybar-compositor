@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Adjust config/waybar/config so the workspace module matches the active
+# compositor. Idempotent. Called by install/desktop.sh and on toggle-theme.
+#
+# Waybar has no conditional config; the only way to keep one shared file
+# is to rewrite the module name based on the running adapter.
+
+set -euo pipefail
+DOTS="${DOTS:-$HOME/.dots}"
+WAYBAR_CONFIG="$DOTS/config/waybar/config"
+
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
+
+[[ -f "$WAYBAR_CONFIG" ]] || { echo "waybar config missing: $WAYBAR_CONFIG" >&2; exit 1; }
+
+target_module="$(dots_compositor)/workspaces"
+current_module=$(grep -oE '"(sway|hyprland)/workspaces"' "$WAYBAR_CONFIG" | head -1 | tr -d '"')
+
+if [[ "$current_module" == "$target_module" ]]; then
+    exit 0
+fi
+
+# Replace the module name in the modules-left array AND in the
+# configuration block key.
+if [[ -n "$current_module" ]]; then
+    sed -i "s|\"$current_module\"|\"$target_module\"|g" "$WAYBAR_CONFIG"
+else
+    # First-time install: insert the module + a sane default config block.
+    # The placeholder line must exist; we add it just before the closing brace.
+    sed -i "s|\"modules-left\": \[$|\"modules-left\": [\n    \"$target_module\",|" "$WAYBAR_CONFIG"
+fi
+
+# Reload waybar if running so the change takes effect immediately.
+if pgrep -x waybar >/dev/null; then
+    pkill -SIGUSR2 -x waybar || true
+fi
+
+echo "waybar: switched workspace module to $target_module"

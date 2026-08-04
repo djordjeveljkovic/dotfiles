@@ -1,0 +1,142 @@
+#!/usr/bin/env bash
+# Toggle the desktop and dotfiles between dark and light modes.
+# Use:
+#   script-toggle-theme            # toggle the current mode
+#   script-toggle-theme dark       # force dark
+#   script-toggle-theme light      # force light
+#   script-toggle-theme status     # print the current mode
+
+set -euo pipefail
+
+DOTS_DIR="${DOTS_DIR:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS_DIR/lib/helpers.sh"
+
+DARK_THEME="$DOTS_DIR/themes/catppuccin"
+LIGHT_THEME="$DOTS_DIR/themes/catppuccin-latte"
+ACTIVE_LINK="$DOTS_DIR/current/theme"
+SCHEMA="org.gnome.desktop.interface"
+
+required_theme_files=(
+    alacritty.toml
+    btop.theme
+    hyprland.conf
+    hyprlock.conf
+    mako.ini
+    sway.conf
+    waybar.css
+    wofi.css
+)
+
+fail() {
+    printf 'script-toggle-theme: %s\n' "$*" >&2
+    command -v notify-send >/dev/null 2>&1 && notify-send "Theme switch failed" "$*"
+    exit 1
+}
+
+detect_mode() {
+    if [[ -L $ACTIVE_LINK ]]; then
+        local target
+        target=$(readlink "$ACTIVE_LINK")
+        if [[ $target == *catppuccin-latte* ]]; then
+            printf 'light\n'
+            return
+        elif [[ $target == *catppuccin* ]]; then
+            printf 'dark\n'
+            return
+        fi
+    fi
+    if command -v gsettings >/dev/null 2>&1; then
+        local current
+        current=$(gsettings get "$SCHEMA" color-scheme 2>/dev/null || true)
+        case $current in
+            "'prefer-light'") printf 'light\n' ;;
+            *) printf 'dark\n' ;;
+        esac
+        return
+    fi
+    printf 'dark\n'
+}
+
+case ${1:-toggle} in
+    dark|light) target_mode=$1 ;;
+    toggle) target_mode=light && [[ $(detect_mode) == light ]] && target_mode=dark ;;
+    status)
+        detect_mode
+        exit 0
+        ;;
+    *)
+        cat <<USAGE >&2
+Usage: $(basename "$0") [dark|light|toggle|status]
+USAGE
+        exit 2
+        ;;
+esac
+
+if [[ $target_mode == light ]]; then
+    source_theme=$LIGHT_THEME
+    color_scheme=prefer-light
+    gtk_theme=Adwaita
+    kvantum_theme=KvGnome
+else
+    source_theme=$DARK_THEME
+    color_scheme=prefer-dark
+    gtk_theme=Adwaita-dark
+    kvantum_theme=KvGnomeDark
+fi
+
+# 1. Verify the source theme is complete.
+for file in "${required_theme_files[@]}"; do
+    [[ -f $source_theme/$file ]] || fail "missing theme file: $source_theme/$file"
+done
+
+# 2. Atomically repoint current/theme to the chosen palette. This is a
+#    relative symlink so the repo can be moved or checked out elsewhere
+#    without breaking it.
+mkdir -p "$(dirname "$ACTIVE_LINK")"
+if [[ -L $ACTIVE_LINK || -e $ACTIVE_LINK ]]; then
+    rm -f "$ACTIVE_LINK"
+fi
+ln -s "../themes/$(basename "$source_theme")" "$ACTIVE_LINK"
+
+# 3. Update the legacy dotfiles-managed mako/btop symlinks.
+mkdir -p "$HOME/.config/mako" "$HOME/.config/btop/themes"
+[[ -L $HOME/.config/mako/config || ! -e $HOME/.config/mako/config ]] && \
+    ln -sf "$source_theme/mako.ini" "$HOME/.config/mako/config"
+[[ -L $HOME/.config/btop/themes/current.theme || ! -e $HOME/.config/btop/themes/current.theme ]] && \
+    ln -sf "$source_theme/btop.theme" "$HOME/.config/btop/themes/current.theme"
+
+# 4. System-wide color-scheme preference. This is the single source of
+#    truth exposed through xdg-desktop-portal and respected by GTK,
+#    libadwaita, and most browsers.
+if command -v gsettings >/dev/null 2>&1; then
+    gsettings set "$SCHEMA" color-scheme "$color_scheme"
+    gsettings set "$SCHEMA" gtk-theme "$gtk_theme"
+fi
+
+# 5. Qt/Kvantum. Existing Qt windows must be restarted to pick this up.
+if command -v kvantummanager >/dev/null 2>&1 && [[ -d /usr/share/Kvantum/$kvantum_theme ]]; then
+    kvantummanager --set "$kvantum_theme" >/dev/null 2>&1 || true
+fi
+
+# 6. Zed is configured with `mode = system`; we don't touch its settings.
+
+# 7. Live reload: reload compositors and supporting services so the new
+#    colors take effect without a full session restart.
+dots_compositor_cmd reload >/dev/null 2>&1 || true
+if command -v makoctl >/dev/null 2>&1; then
+    makoctl reload >/dev/null 2>&1 || true
+fi
+"$DOTS_DIR/bin/script-apply-waybar-compositor" || true
+if pgrep -x waybar >/dev/null 2>&1; then
+    pkill -SIGUSR2 -x waybar || true
+fi
+if pgrep -x hyprlock >/dev/null 2>&1; then
+    # The hyprlock config is re-read on each lock; no explicit reload.
+    :
+fi
+
+printf 'Switched to %s mode.\n' "$target_mode"
+if command -v notify-send >/dev/null 2>&1; then
+    notify-send "System theme" "Switched to $target_mode mode" || true
+fi
