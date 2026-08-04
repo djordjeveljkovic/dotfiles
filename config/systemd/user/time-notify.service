@@ -1,0 +1,6 @@
+[Unit]
+Description=Send a notification with the current time
+
+[Service]
+Type=oneshot
+ExecStart=%h/.dots/bin/script-notify-time
