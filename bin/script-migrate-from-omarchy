@@ -1,0 +1,63 @@
+#!/usr/bin/env bash
+# Migrate from the legacy Omarchy ownership of the desktop to dots.
+# This script is destructive: it disables Omarchy's seamless login, removes
+# the broken /etc/systemd/system/display-manager.service symlink, and stops
+# the getty@tty1 autologin override. Run with care, ideally while a TTY
+# session is open in case Hyprland's auto-login needs to be revived.
+
+set -euo pipefail
+
+DOTFILES_DIR="${DOTFILES_DIR:-$HOME/.dots}"
+OMARCHY_DIRS=(
+    "$HOME/.config/omarchy"
+    "$HOME/.local/share/omarchy"
+)
+LEGACY_OVERRIDE="/etc/systemd/system/getty@tty1.service.d/override.conf"
+STALE_DM_LINK="/etc/systemd/system/display-manager.service"
+
+if [[ $EUID -eq 0 ]]; then
+    echo "refusing to run as root; re-run as $USER" >&2
+    exit 1
+fi
+
+sudo -v || { echo "sudo authentication failed" >&2; exit 1; }
+
+echo "==> Disabling Omarchy seamless login"
+if systemctl list-unit-files omarchy-seamless-login.service >/dev/null 2>&1; then
+    sudo systemctl disable --now omarchy-seamless-login.service || true
+fi
+if systemctl list-unit-files omarchy-battery-monitor.timer >/dev/null 2>&1; then
+    sudo systemctl --global disable --now omarchy-battery-monitor.timer || true
+fi
+
+echo "==> Disabling getty@tty1 autologin"
+if [[ -f $LEGACY_OVERRIDE ]]; then
+    if ! grep -q -- "$USER" "$LEGACY_OVERRIDE"; then
+        echo "  removing stale override pointing at a different user"
+        sudo rm -f "$LEGACY_OVERRIDE"
+    else
+        echo "  override is for $USER; leaving it for now"
+    fi
+fi
+sudo systemctl disable getty@tty1.service || true
+
+echo "==> Removing stale display-manager.service symlink"
+if [[ -L $STALE_DM_LINK && $(readlink "$STALE_DM_LINK") == *lemurs* ]]; then
+    sudo rm -f "$STALE_DM_LINK"
+    sudo systemctl daemon-reload
+fi
+
+echo "==> Removing Omarchy per-user state"
+for d in "${OMARCHY_DIRS[@]}"; do
+    if [[ -d $d ]]; then
+        echo "  $d"
+        rm -rf "$d"
+    fi
+done
+
+echo "==> Reapplying dots manifest"
+. "$DOTFILES_DIR/lib/helpers.sh"
+dots_apply_manifest
+
+echo "==> Verifying with audit"
+"$DOTFILES_DIR/bin/script-audit-system" || true
