@@ -8,7 +8,9 @@
 #   mute     toggle sink mute
 #   mic      toggle source mute
 #
-# Notifications go through mako via notify-send.
+# Notifications go through dots-system-notify, which routes them to the
+# bottom-center mako (secondary D-Bus bus). Falls back to the top-right
+# mako if the bottom bus is unavailable.
 
 set -euo pipefail
 
@@ -16,7 +18,7 @@ STEP="${SCREENSHOT_VOLUME_STEP:-1}" # percent
 SINK="@DEFAULT_AUDIO_SINK@"
 SOURCE="@DEFAULT_AUDIO_SOURCE@"
 
-notify() { command -v notify-send >/dev/null && notify-send -a "audio" -h "string:x-canonical-private-synchronous:audio" "$@" || true; }
+notify() { command -v ~/.dots/bin/dots-system-notify >/dev/null && ~/.dots/bin/dots-system-notify -a "audio" -h "string:x-canonical-private-synchronous:audio" "$@" || notify-send -a "audio" -h "string:x-canonical-private-synchronous:audio" "$@" || true; }
 
 # Render a 50-cell bar. Each cell is either "-" (empty) or "█" (filled);
 # no sub-block characters so every cell is the same monospace width and

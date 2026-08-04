@@ -103,6 +103,10 @@ ln -s "../themes/$(basename "$source_theme")" "$ACTIVE_LINK"
 mkdir -p "$HOME/.config/mako" "$HOME/.config/btop/themes"
 [[ -L $HOME/.config/mako/config || ! -e $HOME/.config/mako/config ]] && \
     ln -sf "$source_theme/mako.ini" "$HOME/.config/mako/config"
+# Bottom mako (system-info OSD, lives on its own D-Bus bus). Same
+# theme directory, different filename.
+[[ -L $HOME/.config/mako/config-bottom || ! -e $HOME/.config/mako/config-bottom ]] && \
+    ln -sf "$source_theme/mako-bottom.ini" "$HOME/.config/mako/config-bottom"
 [[ -L $HOME/.config/btop/themes/current.theme || ! -e $HOME/.config/btop/themes/current.theme ]] && \
     ln -sf "$source_theme/btop.theme" "$HOME/.config/btop/themes/current.theme"
 
@@ -124,8 +128,13 @@ fi
 # 7. Live reload: reload compositors and supporting services so the new
 #    colors take effect without a full session restart.
 dots_compositor_cmd reload >/dev/null 2>&1 || true
+# Reload both mako instances (top: default bus, bottom: custom bus).
 if command -v makoctl >/dev/null 2>&1; then
     makoctl reload >/dev/null 2>&1 || true
+    if [[ -r "$HOME/.config/dots/bus-bottom" ]]; then
+        DBUS_SESSION_BUS_ADDRESS="$(cat "$HOME/.config/dots/bus-bottom")" \
+            makoctl reload >/dev/null 2>&1 || true
+    fi
 fi
 "$DOTS_DIR/bin/script-apply-waybar-compositor" || true
 if pgrep -x waybar >/dev/null 2>&1; then

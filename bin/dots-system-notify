@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# ~/.dots/bin/dots-system-notify
+#
+# notify-send wrapper that targets the bottom-center mako instead of the
+# default top-right one. Used by system-info scripts (volume, brightness,
+# mic, media, keyboard layout) so their OSDs appear at the bottom-center.
+#
+# The bottom mako is reached via the secondary D-Bus session bus started
+# by dots-session-buses. Its address is cached in
+#     ~/.config/dots/bus-bottom
+#
+# Usage is identical to notify-send:
+#   dots-system-notify -a audio "Volume 60%" ""
+#   dots-system-notify -u low -t 1500 "Quick ping"
+#
+# Falls back to plain notify-send (default bus / top mako) if the bottom
+# bus is missing or unreachable, so notifications are never silently lost.
+
+set -euo pipefail
+
+DOTS="${DOTS:-$HOME/.dots}"
+ADDR_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dots/bus-bottom"
+
+if [[ -r "$ADDR_FILE" ]]; then
+    addr="$(cat "$ADDR_FILE")"
+    if [[ -n "$addr" ]] && DBUS_SESSION_BUS_ADDRESS="$addr" \
+        dbus-send --session --dest=org.freedesktop.DBus \
+        /org/freedesktop/DBus org.freedesktop.DBus.ListNames >/dev/null 2>&1; then
+        DBUS_SESSION_BUS_ADDRESS="$addr" exec notify-send "$@"
+    fi
+fi
+
+# Bottom bus not running — restart it lazily and retry once.
+if [[ -x "$DOTS/bin/dots-session-buses" ]]; then
+    "$DOTS/bin/dots-session-buses" || true
+    if [[ -r "$ADDR_FILE" ]]; then
+        addr="$(cat "$ADDR_FILE")"
+        if [[ -n "$addr" ]]; then
+            DBUS_SESSION_BUS_ADDRESS="$addr" exec notify-send "$@"
+        fi
+    fi
+fi
+
+# Bus still not available — fall back to default-bus / top mako so the
+# user at least sees something.
+exec notify-send "$@"

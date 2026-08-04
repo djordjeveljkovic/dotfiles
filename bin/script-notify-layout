@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Cycle to the next XKB keyboard layout and show the new layout name via mako.
-# Replaces the swayosd --custom-message OSD that the previous binding used.
+# Cycle to the next XKB keyboard layout and show the new layout name.
 # Compositor-neutral: detects the running compositor and dispatches.
+# Notification goes through dots-system-notify → bottom-center mako
+# (where the user is more likely to see it as they type).
 
 set -euo pipefail
 command -v notify-send >/dev/null || exit 0
@@ -40,6 +41,14 @@ case "$(dots_compositor)" in
         ;;
 esac
 
-notify-send -a "keyboard" -h "string:x-canonical-private-synchronous:keyboard" \
-    "Keyboard layout" "$name" \
-    -h "string:image-path:preferences-desktop-keyboard"
+if [[ -x "$DOTS/bin/dots-system-notify" ]]; then
+    "$DOTS/bin/dots-system-notify" -a "keyboard" \
+        -h "string:x-canonical-private-synchronous:keyboard" \
+        -h "string:image-path:preferences-desktop-keyboard" \
+        "Keyboard layout" "$name"
+else
+    notify-send -a "keyboard" \
+        -h "string:x-canonical-private-synchronous:keyboard" \
+        -h "string:image-path:preferences-desktop-keyboard" \
+        "Keyboard layout" "$name"
+fi

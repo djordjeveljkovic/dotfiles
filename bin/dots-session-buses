@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# ~/.dots/bin/dots-session-buses
+#
+# Bring up the secondary D-Bus session bus used by the bottom-center mako.
+#
+# The default session bus (managed by systemd / dbus-broker) carries
+# org.freedesktop.Notifications to the top-right mako for normal app
+# notifications. This script starts a *second* bus whose only job is to
+# route notify-send calls (specifically those tagged as system info) to a
+# separate mako instance anchored at bottom-center.
+#
+# Why a second bus: mako 1.x cannot run two instances — both would try
+# to claim org.freedesktop.Notifications on the same bus and the second
+# would fail with 'Failed to acquire service name'. Each instance needs
+# its own session bus.
+#
+# The address of the bottom bus is written to
+#     ~/.config/dots/bus-bottom
+# so dots-system-notify and the autostart can pick it up.
+#
+# Idempotent. Safe to call multiple times.
+
+set -euo pipefail
+
+DOTS="${DOTS:-$HOME/.dots}"
+USER_ID="$(id -u)"
+RUNDIR="/run/user/${USER_ID}"
+BUSDIR="${XDG_CONFIG_HOME:-$HOME/.config}/dots"
+ADDR_FILE="$BUSDIR/bus-bottom"
+SOCK="$RUNDIR/dots-bus-bottom"
+
+mkdir -p "$BUSDIR"
+
+bus_alive() {
+    local addr="$1"
+    [[ -z "$addr" ]] && return 1
+    DBUS_SESSION_BUS_ADDRESS="$addr" dbus-send --session \
+        --dest=org.freedesktop.DBus \
+        /org/freedesktop/DBus org.freedesktop.DBus.ListNames \
+        >/dev/null 2>&1
+}
+
+# If a previous run wrote an address and the bus still answers, reuse it.
+if [[ -f "$ADDR_FILE" ]]; then
+    if bus_alive "$(cat "$ADDR_FILE")"; then
+        exit 0
+    fi
+    # Stale address — clean it up so we can rebind.
+    rm -f "$ADDR_FILE"
+fi
+
+# Make sure the runtime dir exists (systemd usually creates it, but be
+# defensive against minimal containers / custom paths).
+mkdir -p "$RUNDIR" 2>/dev/null || {
+    echo "dots-session-buses: cannot create $RUNDIR" >&2
+    exit 1
+}
+
+# Remove a stale socket from a previous botched shutdown.
+rm -f "$SOCK"
+
+# Launch the secondary session bus. --nofork keeps the daemon in the
+# foreground; we background it ourselves so we get the PID for shutdown.
+# --syslog-only suppresses stderr chatter; remove if debugging.
+dbus-daemon --session \
+    --address="unix:path=$SOCK" \
+    --nofork \
+    --nopidfile \
+    --syslog-only \
+    >/dev/null 2>&1 &
+DOTS_BOTTOM_BUS_PID=$!
+
+# Wait up to ~2s for the socket + name registration to settle. The
+# daemon comes up almost instantly but D-Bus clients retry on
+# ENOENT/socket-still-listening and we want a stable handoff.
+for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if bus_alive "unix:path=$SOCK"; then
+        break
+    fi
+    sleep 0.2
+done
+
+if ! bus_alive "unix:path=$SOCK"; then
+    kill "$DOTS_BOTTOM_BUS_PID" 2>/dev/null || true
+    rm -f "$SOCK"
+    echo "dots-session-buses: bottom bus failed to start at $SOCK" >&2
+    exit 1
+fi
+
+echo "unix:path=$SOCK" >"$ADDR_FILE"
+echo "dots-session-buses: bottom bus up at $SOCK (pid $DOTS_BOTTOM_BUS_PID)"

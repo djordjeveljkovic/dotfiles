@@ -5,13 +5,16 @@
 # Subcommands:
 #   up     raise by STEP%
 #   down   lower by STEP%
+#
+# Notifications go through dots-system-notify → bottom-center mako.
+# Falls back to top-right mako if the bottom bus is unavailable.
 
 set -euo pipefail
 
 STEP="${SCREENSHOT_BRIGHTNESS_STEP:-5}"   # percent
 DEVICE="${SCREENSHOT_BRIGHTNESS_DEVICE:-}"   # empty = auto (first writable)
 
-notify() { command -v notify-send >/dev/null && notify-send -a "brightness" -h "string:x-canonical-private-synchronous:brightness" "$@" || true; }
+notify() { command -v ~/.dots/bin/dots-system-notify >/dev/null && ~/.dots/bin/dots-system-notify -a "brightness" -h "string:x-canonical-private-synchronous:brightness" "$@" || notify-send -a "brightness" -h "string:x-canonical-private-synchronous:brightness" "$@" || true; }
 
 bar() {
     awk -v pct="$1" 'BEGIN {

@@ -9,10 +9,11 @@
 #   stop       stop
 #
 # Reads metadata via `playerctl metadata` and shows "Artist - Title" + status icon.
+# Notifications go through dots-system-notify → bottom-center mako.
 
 set -euo pipefail
 
-notify() { command -v notify-send >/dev/null && notify-send -a "media" -h "string:x-canonical-private-synchronous:media" "$@" || true; }
+notify() { command -v ~/.dots/bin/dots-system-notify >/dev/null && ~/.dots/bin/dots-system-notify -a "media" -h "string:x-canonical-private-synchronous:media" "$@" || notify-send -a "media" -h "string:x-canonical-private-synchronous:media" "$@" || true; }
 
 # Read metadata safely; may return empty if no player is running.
 meta() {
