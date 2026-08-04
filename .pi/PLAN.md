@@ -143,3 +143,44 @@ Run, as applicable:
 - Installation and reinstallation are idempotent, do not install the wrong compositor stack, and do not overwrite unmanaged files without the existing backup behavior.
 - Audit/static checks pass for both compositor selections, and changed scripts/configs pass syntax/reference validation.
 - Documentation explains the architecture, selection process, dependencies, optional features, and verification commands.
+## Implementation Status (2026-08-04)
+
+Branch `symbiosis` created from `new_age` at `7980db7`, merged `main` (`bdc9822`),
+preserved the user's uncommitted `.pi/PLAN.md` content. The merge produced three
+commits on top of `new_age`; `main` and `new_age` refs were never moved.
+
+1. `00f6a7a` — merge main into symbiosis (new_age + main reconciled)
+2. `140f0d7` — refactor scripts to route compositor-specific calls through
+                `dots_compositor` / `dots_compositor_cmd`
+3. `55cf3d5` — docs + `install.sh --compositor` flag
+
+### Architecture delivered
+
+* Shared base: `install/desktop.sh` installs the common Wayland stack
+  (waybar, mako, fuzzel, polkit-gnome, audio, fonts, TUIs) and then
+  dispatches to one of two thin adapters.
+* Compositor adapters: `install/compositor-sway.sh`,
+  `install/compositor-hyprland.sh`. Each installs the compositor's own
+  package set and writes `~/.config/dots/compositor` so downstream steps
+  can detect the adapter without an env var.
+* Selection: `DOTS_COMPOSITOR=sway|hyprland` env var, `--compositor`
+  CLI flag to `install.sh`, or interactive prompt in the installer.
+* Universal entrypoint: `bin/dots-session`, called from `~/.bash_profile`
+  (auto-login on tty1).
+* Dispatcher: `lib/helpers.sh::dots_compositor` + `dots_compositor_cmd`.
+* Waybar adapter: `bin/script-apply-waybar-compositor` rewrites
+  `config/waybar/config`'s workspace module to match the active
+  compositor (Waybar has no config conditionals).
+
+### Verification results
+
+| Check | Result |
+|---|---|
+| `bash -n` on every `*.sh` | 0 errors |
+| Manifest source existence | 0 missing |
+| Shared files with direct `swaymsg`/`hyprctl` calls | 0 (only the dispatcher in `lib/helpers.sh`) |
+| Sway/Hyprland adapter symmetry | 8 vs 9 source files (Hyprland has `monitors.conf`) |
+| `bin/script-audit-system` end-to-end | 40 OK, 3 expected Omarchy warnings, 0 errors |
+| All Hyprland `source =` paths resolve | OK |
+| All Sway `include` paths exist | OK |
+| `main`/`new_age` refs unchanged | bdc9822 / 7980db7 (verified) |
