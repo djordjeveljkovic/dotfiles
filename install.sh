@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # Entry point: base -> profile (desktop|server) -> opt flags
+#
+# Compositor selection (when PROFILE=desktop) is driven by the
+# DOTS_COMPOSITOR environment variable (sway | hyprland). If unset,
+# the installer asks interactively. Compositor-specific packages and
+# configs are then delegated to install/compositor-{sway,hyprland}.sh
+# from install/desktop.sh.
 set -euo pipefail
 
 DOTS="$HOME/.dots"
@@ -13,6 +19,8 @@ fi
 # ---------------------------------------------------------------------------
 # Parse args: positional profile + --flags
 #   install.sh [desktop|server] [--nvidia] [--plymouth] [--bluetooth] ...
+#   install.sh desktop --compositor sway
+#   install.sh desktop --compositor hyprland
 # If no profile arg, ask interactively.
 # ---------------------------------------------------------------------------
 PROFILE=""
@@ -21,6 +29,8 @@ OPTS=()
 while [[ $# -gt 0 ]]; do
   case "$1" in
     desktop|server) PROFILE="$1"; shift ;;
+    --compositor)   DOTS_COMPOSITOR="$2"; shift 2 ;;
+    --compositor=*) DOTS_COMPOSITOR="${1#--compositor=}"; shift ;;
     --*)            OPTS+=("$1"); shift ;;
     *)              echo "Unknown arg: $1"; exit 1 ;;
   esac
@@ -85,7 +95,24 @@ done
 # ---------------------------------------------------------------------------
 # 2. PROFILE
 # ---------------------------------------------------------------------------
-run_step "profile: $PROFILE" "$INSTALL/$PROFILE.sh"
+if [[ $PROFILE == desktop ]]; then
+    # Compositor picker: env var > interactive
+    if [[ -z "${DOTS_COMPOSITOR:-}" ]]; then
+        DOTS_COMPOSITOR=$(gum choose sway hyprland --header "Select compositor adapter")
+    fi
+    case "$DOTS_COMPOSITOR" in
+        sway|hyprland) ;;
+        *) echo "Unknown --compositor value: $DOTS_COMPOSITOR (expected sway|hyprland)"; exit 1 ;;
+    esac
+    export DOTS_COMPOSITOR
+    # Persist the choice so subsequent steps (theme toggle, audit,
+    # session entrypoint) pick the same adapter without an env var.
+    mkdir -p "$HOME/.config/dots"
+    printf '%s\n' "$DOTS_COMPOSITOR" > "$HOME/.config/dots/compositor"
+    run_step "profile: desktop ($DOTS_COMPOSITOR)" "$INSTALL/desktop.sh"
+else
+    run_step "profile: $PROFILE" "$INSTALL/$PROFILE.sh"
+fi
 
 # ---------------------------------------------------------------------------
 # 3. OPT FLAGS

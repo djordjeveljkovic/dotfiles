@@ -7,24 +7,60 @@ toolchain in a single run via `install.sh`.
 
 ---
 
-## Repository Layout
+## Architecture: shared + compositor adapters
+
+The configuration is **compositor-neutral by design**: everything that does not
+intrinsically depend on a compositor's IPC lives under `bin/`, `config/` (with
+`config/hypr/` and `config/sway/` as thin adapters), and `default/bash/`.
+Compositor-specific syntax (Sway's `bindsym`, Hyprland's `bind = ...`) and
+IPC commands (`swaymsg`, `hyprctl`) live in their respective adapter.
 
 ```
 ~/.dots/
-├── install.sh              # Entry point — sources every install/*.sh
-├── install/                # Per-feature installers (run in order)
-├── bin/                    # Helper scripts invoked by keybindings
-├── lib/                    # Shared bash helper functions (podman, gum, etc.)
-├── config/                 # Static app configs → copied to ~/.config/
-├── default/                # "Common" configs: bash, hypr, sway, ssh, gpg, tmux
-├── current/
-│   ├── theme/              # Currently active theme (Catppuccin Mocha)
-│   ├── walls/              # Wallpaper library (yazi-pickable)
-│   └── background          # Active wallpaper symlink/file
-├── themes/                 # 7 ready-to-use theme palettes
-├── background              # The wallpaper image currently being shown
-├── grub                    # GRUB config used by the plymouth installer
-└── plymouth_image.png      # Custom splash image
+├── install.sh                      # Entry point; asks for desktop|server + compositor
+├── install/
+│   ├── desktop.sh                  # Shared Wayland base; dispatches to a compositor adapter
+│   ├── compositor-sway.sh          # Sway-only packages + adapter marker
+│   ├── compositor-hyprland.sh      # Hyprland-only packages + adapter marker
+│   └── ...                         # per-feature installers
+├── bin/
+│   ├── dots-session                # Universal session entrypoint (calls sway|Hyprland)
+│   ├── script-apply-waybar-compositor  # Rewrites waybar workspaces module
+│   └── script-*                    # Compositor-neutral scripts (use dots_compositor)
+├── lib/
+│   └── helpers.sh                  # dots_compositor + dots_compositor_cmd dispatch
+├── config/                         # Shared app configs (waybar, mako, git, nvim, ...)
+│   ├── hypr/                       # Thin Hyprland adapter (symlinks into ~/.config/hypr)
+│   └── sway/                       # Default Sway adapter (linked to ~/.config/sway)
+├── default/
+│   ├── bash/                       # Compositor-neutral shell setup (rc, envs)
+│   ├── sway/                       # Sway source files (linked via default/sway → config/sway)
+│   ├── hypr/                       # Hyprland source files
+│   ├── gpg/                        # Shared GPG config
+│   └── sshconfig                   # Shared SSH config
+├── manifest/
+│   └── desktop.conf                # Source-of-truth for which paths get linked
+├── themes/                         # Catppuccin (dark) + Catppuccin Latte (light)
+└── current/theme                   # Active theme symlink (toggled by bin/script-toggle-theme)
+```
+
+The active compositor is selected by `DOTS_COMPOSITOR` (env var) or by the
+interactive prompt in `install.sh`. The choice is persisted to
+`~/.config/dots/compositor` and read by `dots_compositor` so that scripts and
+session entrypoints pick the right adapter without needing the env var set.
+
+To switch adapters after installation:
+
+```bash
+# Install the other compositor's packages and reload the session
+sudo bash ~/.dots/install/compositor-sway.sh
+# or
+sudo bash ~/.dots/install/compositor-hyprland.sh
+
+# Pick which one boots on tty1
+echo sway | sudo tee ~/.config/dots/compositor
+# or
+echo hyprland | sudo tee ~/.config/dots/compositor
 ```
 
 ---
