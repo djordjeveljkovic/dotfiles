@@ -1,4 +1,11 @@
 #!/bin/bash
+# Power menu — compositor-neutral.
+# Locks via the appropriate lock daemon, exits via dots_compositor_cmd.
+
+set -euo pipefail
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
 
 show_power_menu() {
   local menu_options="  Lock
@@ -7,18 +14,22 @@ show_power_menu() {
    Restart
    Shutdown"
 
-  # fuzzel requires a simple list on stdin
-  local selection=$(printf "%s\n" "$menu_options" | \
+  local selection
+  selection=$(printf "%s\n" "$menu_options" | \
     fuzzel --dmenu --hide-prompt --lines 5 --width 14 --inner-pad 0)
 
   case "$selection" in
-    *Lock*) swaylock ;;
-    *Suspend*) systemctl suspend ;;
-    *Relaunch*) swaymsg exit ;;
-    *Restart*) systemctl reboot ;;
+    *Lock*)
+      case "$(dots_compositor)" in
+        sway)     swaylock ;;
+        hyprland) hyprlock ;;
+      esac
+      ;;
+    *Suspend*)  systemctl suspend ;;
+    *Relaunch*) dots_compositor_cmd exit ;;
+    *Restart*)  systemctl reboot ;;
     *Shutdown*) systemctl poweroff ;;
   esac
 }
 
-# Call the function
 show_power_menu

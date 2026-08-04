@@ -1,31 +1,44 @@
 #!/usr/bin/env bash
 # Cycle to the next XKB keyboard layout and show the new layout name via mako.
 # Replaces the swayosd --custom-message OSD that the previous binding used.
+# Compositor-neutral: detects the running compositor and dispatches.
 
 set -euo pipefail
 command -v notify-send >/dev/null || exit 0
 command -v jq >/dev/null || exit 0
-command -v swaymsg >/dev/null || exit 0
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
 
-swaymsg input type:keyboard xkb_switch_layout next >/dev/null
-
-# Find the keyboard input that has an xkb_active_layout_name and read it.
-# After the cycle, the first match is the just-active keyboard.
-name=$(swaymsg -t get_inputs -r | jq -r '
-    .[]
-    | select(.type=="keyboard")
-    | .xkb_active_layout_name // empty
-' | head -1)
-
-# xkb_active_layout_name can be empty if the layout is unset or for some hotplug
-# keyboards; fall back to the layout index.
-if [[ -z "$name" ]]; then
-    idx=$(swaymsg -t get_inputs -r | jq -r '
-        .[] | select(.type=="keyboard")
-        | .xkb_active_layout_index // 0
-    ' | head -1)
-    name="Layout $((idx + 1))"
-fi
+case "$(dots_compositor)" in
+    sway)
+        swaymsg input type:keyboard xkb_switch_layout next >/dev/null
+        name=$(swaymsg -t get_inputs -r | jq -r '
+            .[] | select(.type=="keyboard")
+            | .xkb_active_layout_name // empty
+        ' | head -1)
+        if [[ -z "$name" ]]; then
+            idx=$(swaymsg -t get_inputs -r | jq -r '
+                .[] | select(.type=="keyboard")
+                | .xkb_active_layout_index // 0
+            ' | head -1)
+            name="Layout $((idx + 1))"
+        fi
+        ;;
+    hyprland)
+        # Hyprland: cycle next layout via hyprctl
+        hyprctl switchxkblayout next all >/dev/null
+        # Hyprland exposes the active layout via `hyprctl devices -j`.
+        name=$(hyprctl devices -j | jq -r '
+            .keyboards[]
+            | select(.main == true)
+            | .active_keymap // empty
+        ' | head -1)
+        if [[ -z "$name" ]]; then
+            name="Layout switched"
+        fi
+        ;;
+esac
 
 notify-send -a "keyboard" -h "string:x-canonical-private-synchronous:keyboard" \
     "Keyboard layout" "$name" \

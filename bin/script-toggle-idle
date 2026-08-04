@@ -1,21 +1,37 @@
 #!/usr/bin/env bash
+# Toggle the compositor's idle/lock daemon.
+# Compositor-neutral: picks swayidle/hypridle and the matching IPC.
+# Killing the daemon disables auto-lock + auto-dpms; restarting re-enables them.
 
-# Toggle swayidle (the idle/lock daemon launched by sway autostart).
-# Killing it disables auto-lock + auto-dpms; restarting it re-enables them.
+set -euo pipefail
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
 
-# Mirror the timeouts defined in default/sway/autostart
-IDLE_CMD=(
-  swayidle -w
-  timeout 300 'swaylock -f -c 000000'
-  timeout 330 'swaymsg "output * dpms off"'
-  resume      'swaymsg "output * dpms on"'
-  before-sleep 'swaylock -f -c 000000'
-)
+case "$(dots_compositor)" in
+    sway)
+        IDLE_DAEMON="swayidle"
+        IDLE_CMD=(
+            swayidle -w
+            timeout 300 'swaylock -f -c 000000'
+            timeout 330 'swaymsg "output * dpms off"'
+            resume      'swaymsg "output * dpms on"'
+            before-sleep 'swaylock -f -c 000000'
+        )
+        ;;
+    hyprland)
+        IDLE_DAEMON="hypridle"
+        # Hyprland's idle config is in config/hypr/hypridle.conf (linked
+        # from ~/.config/hypr/hypridle.conf). Restart the daemon and let
+        # it re-read its config; that is the supported toggle path.
+        IDLE_CMD=(hypridle)
+        ;;
+esac
 
-if pgrep -x swayidle >/dev/null; then
-  pkill -x swayidle
-  notify-send "Idle lock" "Disabled"
+if pgrep -x "$IDLE_DAEMON" >/dev/null; then
+    pkill -x "$IDLE_DAEMON"
+    notify-send "Idle lock" "Disabled ($IDLE_DAEMON)"
 else
-  setsid "${IDLE_CMD[@]}" >/dev/null 2>&1 &
-  notify-send "Idle lock" "Enabled"
+    setsid "${IDLE_CMD[@]}" >/dev/null 2>&1 &
+    notify-send "Idle lock" "Enabled ($IDLE_DAEMON)"
 fi

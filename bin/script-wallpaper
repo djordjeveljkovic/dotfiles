@@ -1,5 +1,12 @@
 #!/usr/bin/env bash
+# Pick a wallpaper with yazi and apply it compositor-neutrally.
+# Sway uses `output * bg <path> fill` (no extra daemon needed).
+# Hyprland uses `hyprpaper` (configured via ~/.config/hypr/hyprpaper.conf).
+
 set -euo pipefail
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
 
 WALLDIR="$HOME/Pictures/walls"
 TMPFILE="/tmp/yazi_selected_wallpaper"
@@ -18,12 +25,26 @@ if [[ ! -f "$WALL" ]]; then
     exit 1
 fi
 
-# Apply to all outputs via swaymsg (sway-native, no external swaybg daemon).
-# `output * bg` survives `swaymsg reload` cleanly because it's set on the
-# output itself, not in a separate process that would have to be respawned.
-swaymsg "output * bg '$WALL' fill"
+case "$(dots_compositor)" in
+    sway)
+        swaymsg "output * bg '$WALL' fill"
+        ;;
+    hyprland)
+        # hyprpaper picks up its config on (re)load. We write the chosen
+        # wall into a tiny config snippet and reload hyprpaper.
+        mkdir -p "$HOME/.config/hypr"
+        cat > "$HOME/.config/hypr/hyprpaper.conf" <<EOF
+preload = $WALL
+wallpaper = ,$WALL
+splash = false
+EOF
+        pkill -x hyprpaper 2>/dev/null || true
+        setsid hyprpaper >/dev/null 2>&1 &
+        ;;
+esac
 
-# Persist as the default background so the next boot keeps it
+# Persist as the default background so the next boot keeps it.
+mkdir -p "$HOME/.dots/assets"
 cp "$WALL" "$HOME/.dots/assets/background"
 
 notify-send "Wallpaper set" "$(basename "$WALL")"

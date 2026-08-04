@@ -70,10 +70,23 @@ if [[ -f $MANIFEST ]]; then
   log
 fi
 
-# Required commands
+# Required commands — shared across both adapters
 log "==> Required commands"
-required=(gsettings hyprctl hyprpaper hypridle hyprlock hyprshot hyprsunset waybar wofi mako fuzzel swayosd-server alacritty btop)
-for cmd in "${required[@]}"; do
+DOTS_DIR="${DOTS_DIR:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS_DIR/lib/helpers.sh"
+
+shared_required=(gsettings waybar mako fuzzel alacritty btop)
+compositor_required=()
+case "$(dots_compositor)" in
+    sway)
+        compositor_required=(sway swaymsg swaylock swayidle swaybg kanshi)
+        ;;
+    hyprland)
+        compositor_required=(Hyprland hyprctl hyprpaper hypridle hyprlock hyprshot hyprsunset)
+        ;;
+esac
+for cmd in "${shared_required[@]}" "${compositor_required[@]}"; do
   if command -v "$cmd" >/dev/null 2>&1; then
     pkg=$(pacman -Qo "$(command -v "$cmd")" 2>/dev/null | awk '{print $5}' || true)
     log "  [OK]    $cmd ($pkg)"

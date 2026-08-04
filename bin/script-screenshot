@@ -14,6 +14,10 @@
 
 set -euo pipefail
 
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
+
 SHOT_DIR="${XDG_PICTURES_DIR:-$HOME/Pictures}/screenshots"
 mkdir -p "$SHOT_DIR"
 
@@ -76,11 +80,19 @@ need() {
     done
 }
 
-# focused window geometry: "<x>,<y> <w>x<h>"
+# focused window geometry: "<x>,<y> <w>x<h>" (compositor-neutral)
 window_geom() {
-    swaymsg -t get_tree -r |
-        jq -r '.. | objects | select(.focused==true and .rect?) | "\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)"' |
-        head -1
+    case "$(dots_compositor)" in
+        sway)
+            swaymsg -t get_tree -r |
+                jq -r '.. | objects | select(.focused==true and .rect?) | "\(.rect.x),\(.rect.y) \(.rect.width)x\(.rect.height)"' |
+                head -1
+            ;;
+        hyprland)
+            hyprctl activewindow -j |
+                jq -r '"\(.at[0]),\(.at[1]) \(.size[0])x\(.size[1])"'
+            ;;
+    esac
 }
 
 save_and_copy() {
@@ -103,7 +115,7 @@ case "${1:-}" in
         save_and_copy "$f"
         ;;
     window)
-        need grim swaymsg jq wl-copy
+        need grim jq wl-copy
         geom=$(window_geom)
         [[ -n "$geom" ]] || err "no focused window"
         f="$SHOT_DIR/$(ts).png"

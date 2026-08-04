@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Minimal workspace-change / window-move notification for Sway.
+# Minimal workspace-change / window-move notification. Compositor-neutral.
 # Usage: script-notify-workspace <switch|move> <workspace-number>
 # Designed to be chained on the end of a bindsym line, e.g.:
 #   bindsym $mod+3  workspace number 3, exec ~/.dots/bin/script-notify-workspace switch 3
@@ -11,26 +11,15 @@ shopt -s nullglob
 action="${1:-}"
 ws="${2:-}"
 
-# Optional: friendly names per workspace. Edit as desired; falls back to
-# the bare number if not set or if the key is missing.
-declare -A names=(
-    [1]="1"
-    [2]="2"
-    [3]="3"
-    [4]="4"
-    [5]="5"
-    [6]="6"
-    [7]="7"
-    [8]="8"
-    [9]="9"
-    [10]="10"
-)
-name="${names[$ws]:-$ws}"
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
+app_name="$(dots_compositor)"
 
 case "$action" in
     switch)
         notify-send \
-            -a "sway" \
+            -a "$app_name" \
             -t 1200 \
             -h "string:x-canonical-private-synchronous:workspace" \
             "→ $ws" "workspace" \
@@ -38,7 +27,7 @@ case "$action" in
         ;;
     move)
         notify-send \
-            -a "sway" \
+            -a "$app_name" \
             -t 1200 \
             -h "string:x-canonical-private-synchronous:workspace" \
             "↪ $ws" "window moved" \

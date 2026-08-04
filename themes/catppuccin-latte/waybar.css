@@ -1,14 +1,8 @@
-<<<<<<< HEAD:current/theme/waybar.css
-/* Active theme colors for waybar.
-   Sourced via config/waybar/style.css: @import url("current/theme/waybar.css")
-   Palette: Catppuccin Macchiato-ish (matches current/theme/mako.ini + btop.theme) */
+/* Catppuccin Latte — Waybar theme tokens.
+   Sourced via config/waybar/style.css: @import url("current/theme/waybar.css") */
 
-@define-color background #24273a;
-@define-color foreground #cad3f5;
-@define-color accent     #8caaee;
-@define-color urgent     #ed8796;
-@define-color dim        #6e738d;
-=======
 @define-color foreground #4c4f69;
 @define-color background #eff1f5;
->>>>>>> main:themes/catppuccin-latte/waybar.css
+@define-color accent     #1e66f5;
+@define-color urgent     #d20f39;
+@define-color dim        #9ca0b0;

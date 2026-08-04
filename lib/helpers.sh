@@ -62,6 +62,45 @@ dots_expand_home() {
     esac
 }
 
+# ----------------------------------------------------------------------------
+# compositor detection / dispatch
+# ----------------------------------------------------------------------------
+# The active compositor is whatever ~/.config/dots/compositor holds, or
+# the DOTS_COMPOSITOR env var, or auto-detected from running processes.
+# Scripts and shared configs call `dots_compositor` instead of hardcoding
+# swaymsg / hyprctl so that swapping adapters requires no script edits.
+
+DOTS_COMPOSITOR_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dots/compositor"
+
+dots_compositor() {
+    if [[ -n "${DOTS_COMPOSITOR:-}" ]]; then
+        printf '%s' "$DOTS_COMPOSITOR"
+        return 0
+    fi
+    if [[ -f "$DOTS_COMPOSITOR_FILE" ]]; then
+        head -n1 "$DOTS_COMPOSITOR_FILE"
+        return 0
+    fi
+    if pgrep -x Hyprland >/dev/null 2>&1; then
+        echo hyprland; return 0
+    fi
+    if pgrep -x sway >/dev/null 2>&1; then
+        echo sway; return 0
+    fi
+    echo sway  # safe default
+}
+
+# Run a compositor-specific IPC command. Usage:
+#   dots_compositor_cmd reload
+#   dots_compositor_cmd "output * bg /path/to/wall.jpg fill"
+dots_compositor_cmd() {
+    case "$(dots_compositor)" in
+        sway)     swaymsg "$@" ;;
+        hyprland) hyprctl "$@" ;;
+        *)        echo "dots_compositor_cmd: unknown compositor" >&2; return 1 ;;
+    esac
+}
+
 # Create a symlink at $link pointing to $target, backing up any existing
 # destination unless the destination already correctly points at the target.
 # Returns 0 if the link is in place, 1 on failure.
