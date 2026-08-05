@@ -1,46 +1,30 @@
 #!/usr/bin/env bash
 # ~/.dots/bin/dots-system-notify
 #
-# notify-send wrapper that targets the bottom-center mako instead of the
-# default top-right one. Used by system-info scripts (volume, brightness,
-# mic, media, keyboard layout) so their OSDs appear at the bottom-center.
+# notify-send wrapper that tags the notification with the
+# x-dots-position D-Bus hint so the patched mako (see
+# ~/.local/src/mako branch position-hint) routes it to the
+# bottom-center layer-shell surface instead of the default
+# top-right one.
 #
-# The bottom mako is reached via the secondary D-Bus session bus started
-# by dots-session-buses. Its address is cached in
-#     ~/.config/dots/bus-bottom
+# Used by system-info scripts (volume / brightness / mic / media
+# / keyboard layout) for the system OSDs. Plain notify-send (no
+# wrapper) still works for app notifications and goes top-right
+# because the x-dots-position hint is omitted.
+#
+# On an unpatched mako (e.g. system /usr/bin/mako on a fresh
+# install before the custom binary is built) the hint is silently
+# ignored and the notification lands at the global default anchor
+# (top-right). That is a graceful fallback — no crash, no
+# misrouting — just no bottom-center UX.
 #
 # Usage is identical to notify-send:
 #   dots-system-notify -a audio "Volume 60%" ""
 #   dots-system-notify -u low -t 1500 "Quick ping"
-#
-# Falls back to plain notify-send (default bus / top mako) if the bottom
-# bus is missing or unreachable, so notifications are never silently lost.
 
 set -euo pipefail
 
-DOTS="${DOTS:-$HOME/.dots}"
-ADDR_FILE="${XDG_CONFIG_HOME:-$HOME/.config}/dots/bus-bottom"
-
-if [[ -r "$ADDR_FILE" ]]; then
-    addr="$(cat "$ADDR_FILE")"
-    if [[ -n "$addr" ]] && DBUS_SESSION_BUS_ADDRESS="$addr" \
-        dbus-send --session --dest=org.freedesktop.DBus \
-        /org/freedesktop/DBus org.freedesktop.DBus.ListNames >/dev/null 2>&1; then
-        DBUS_SESSION_BUS_ADDRESS="$addr" exec notify-send "$@"
-    fi
-fi
-
-# Bottom bus not running — restart it lazily and retry once.
-if [[ -x "$DOTS/bin/dots-session-buses" ]]; then
-    "$DOTS/bin/dots-session-buses" || true
-    if [[ -r "$ADDR_FILE" ]]; then
-        addr="$(cat "$ADDR_FILE")"
-        if [[ -n "$addr" ]]; then
-            DBUS_SESSION_BUS_ADDRESS="$addr" exec notify-send "$@"
-        fi
-    fi
-fi
-
-# Bus still not available — fall back to default-bus / top mako so the
-# user at least sees something.
-exec notify-send "$@"
+# Prepend the position hint, keep every other argument the caller
+# passed. The hint must come before the summary because notify-send
+# parses positional args from left to right.
+exec notify-send -h "string:x-dots-position:bottom-center" "$@"

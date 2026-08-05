@@ -97,6 +97,21 @@ if command -v xdg-mime >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------------------
+# Patched mako (per-notification position via x-dots-position hint)
+# ---------------------------------------------------------------------------
+# If ~/.local/src/mako is present (cloned with the position-hint branch
+# applied), rebuild and install the patched binary into ~/.local/bin so
+# 'mako' resolves to it. The autostart calls /home/usrtmp/.local/bin/mako
+# by full path, so this is the source of truth for what mako runs.
+if [[ -d "$HOME/.local/src/mako" ]] && command -v meson >/dev/null 2>&1; then
+    echo "==> Rebuilding patched mako from ~/.local/src/mako"
+    (cd "$HOME/.local/src/mako" && ninja -C build >/dev/null 2>&1) \
+        || meson setup build >/dev/null 2>&1 && ninja -C build >/dev/null 2>&1
+    mkdir -p "$HOME/.local/bin"
+    install -m 0755 "$HOME/.local/src/mako/build/mako" "$HOME/.local/bin/mako"
+fi
+
+# ---------------------------------------------------------------------------
 # Waybar workspace module: pick the right one for the active compositor
 # ---------------------------------------------------------------------------
 "$DOTS/bin/script-apply-waybar-compositor" || true

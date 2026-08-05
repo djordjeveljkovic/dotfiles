@@ -11,13 +11,13 @@ exec swayidle -w \
     timeout 330 'swaymsg "output * dpms off"' \
     resume 'swaymsg "output * dpms on"' \
     before-sleep 'swaylock -f -c 000000' &
-# Bring up the secondary D-Bus session bus used by the bottom mako.
-exec --no-startup-id ~/.dots/bin/dots-session-buses
-# Top-right mako: receives normal notify-send calls (default D-Bus bus).
-exec mako &
-# Bottom-center mako: receives system-info OSDs routed through
-# dots-system-notify (secondary D-Bus bus started above).
-exec env DBUS_SESSION_BUS_ADDRESS="$(cat ~/.config/dots/bus-bottom)" mako -c ~/.dots/config/mako/config-bottom
+# Single mako handles both top-right (default) and bottom-center
+# (when the caller sets the x-dots-position D-Bus hint). The
+# custom mako at ~/.local/bin/mako supports per-notification
+# positions; the system /usr/bin/mako is the upstream build
+# which silently ignores the hint. We invoke the local copy
+# by full path so the autostart works regardless of PATH.
+exec /home/usrtmp/.local/bin/mako &
 # Background: sway-native via `output * bg` (built-in since Sway 1.7).
 # No external swaybg daemon — avoids the double-render fight that happens
 # after `swaymsg reload` if both are active.
