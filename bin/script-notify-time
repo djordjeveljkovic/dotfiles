@@ -5,12 +5,10 @@
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 export DISPLAY=:0
 
-# 2. Send the notification at the bottom-center (via the patched mako's
-# x-dots-position hint). The same DBus bus as everything else; the
-# patched mako routes the hint to a separate layer-shell surface.
+# 2. Send the notification. app-name=time so the mako [app-name=time]
+# block (in ~/.dots/themes/catppuccin/mako.ini) can shrink the
+# notification width — the time text is short, so a full-width
+# notification is wasted space.
 # %H:%M gives "14:30" format
 TIME_NOW=$(date +'%H:%M')
-notify-send -u low \
-    -h "string:x-dots-position:bottom-center" \
-    -i clock \
-    "Time Update $TIME_NOW"
+notify-send -u low -a "time" -i clock "Time Update $TIME_NOW"

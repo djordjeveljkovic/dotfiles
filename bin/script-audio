@@ -38,16 +38,25 @@ bar() {
     }'
 }
 
+# Right-aligned percentage in a 3-character field, matching the
+# script-brightness format so the two stack vertically without jitter:
+#   Volume:   0%
+#   Volume:  10%
+#   Volume: 100%
+format_pct() {
+    awk -v p="$1" 'BEGIN { printf "%3d", p }'
+}
+
 case "${1:-}" in
 up)
   wpctl set-volume -l 1.0 "$SINK" "${STEP}%+" >/dev/null
   vol=$(wpctl get-volume "$SINK" | awk '{print int($2*100)}')
-  notify "$(bar "$vol")" "Volume: ${vol}%" -h int:value:"$vol"
+  notify "Volume:  $(format_pct "$vol")%" -h int:value:"$vol"
   ;;
 down)
   wpctl set-volume "$SINK" "${STEP}%-" >/dev/null
   vol=$(wpctl get-volume "$SINK" | awk '{print int($2*100)}')
-  notify "$(bar "$vol")" "Volume: ${vol}%" -h int:value:"$vol"
+  notify "Volume:  $(format_pct "$vol")%" -h int:value:"$vol"
   ;;
 mute)
   wpctl set-mute "$SINK" toggle >/dev/null
@@ -57,10 +66,10 @@ mute)
   [[ -z "$state" ]] && state=$(pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null) || state=""
   case "${state,,}" in
     *"[muted]"*|*"mute: yes"*|*"muted: yes"*|*"muted: 1"*|"muted"|"yes")
-      notify "$(bar 0)" "Volume: 0% (muted)" -h int:value:0 -h string:state:muted ;;
+      notify "Volume:    0% (muted)" -h int:value:0 -h string:state:muted ;;
     *)
       vol=$(wpctl get-volume "$SINK" | awk '{print int($2*100)}')
-      notify "$(bar "$vol")" "Volume: ${vol}% unmuted" -h int:value:"$vol" ;;
+      notify "Volume:  $(format_pct "$vol")% unmuted" -h int:value:"$vol" ;;
   esac
   ;;
 mic)
