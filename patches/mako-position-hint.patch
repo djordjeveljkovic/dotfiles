@@ -1,0 +1,216 @@
+diff --git a/criteria.c b/criteria.c
+index 9db3966..6f70d1f 100644
+--- a/criteria.c
++++ b/criteria.c
+@@ -41,6 +41,7 @@ void destroy_criteria(struct mako_criteria *criteria) {
+ 	free(criteria->raw_string);
+ 	free(criteria->output);
+ 	free(criteria->mode);
++	free(criteria->position);
+ 	free(criteria);
+ }
+ 
+@@ -107,6 +108,17 @@ bool match_criteria(struct mako_criteria *criteria,
+ 		return false;
+ 	}
+ 
++	if (spec.position) {
++		// A criteria may match a notification that has no position
++		// hint at all (notif->position == NULL). In that case the
++		// notification is using the global anchor; criteria with
++		// position=foo do not match it.
++		if (notif->position == NULL ||
++				strcmp(criteria->position, notif->position) != 0) {
++			return false;
++		}
++	}
++
+ 	if (spec.summary &&
+ 			strcmp(criteria->summary, notif->summary) != 0) {
+ 		return false;
+@@ -352,6 +364,10 @@ bool apply_criteria_field(struct mako_criteria *criteria, char *token) {
+ 		} else if (strcmp(key, "anchor") == 0) {
+ 			return criteria->spec.anchor =
+ 				parse_anchor(value, &criteria->anchor);
++		} else if (strcmp(key, "position") == 0) {
++			criteria->position = strdup(value);
++			criteria->spec.position = true;
++			return true;
+ 		} else if (strcmp(key, "output") == 0) {
+ 			criteria->output = strdup(value);
+ 			criteria->spec.output = true;
+@@ -425,6 +441,26 @@ ssize_t apply_each_criteria(struct wl_list *criteria_list,
+ 		struct mako_notification *notif) {
+ 	ssize_t match_count = 0;
+ 
++	// Per-notification position hint. If set, translate it to a
++	// layer-shell anchor BEFORE criteria apply so that the surface
++	// selection below keys off the right anchor (the criteria may
++	// also set a new anchor via the `anchor` style; if both are
++	// present, the criteria-set value wins because the apply pass
++	// runs after this assignment).
++	if (notif->position != NULL) {
++		uint32_t anchor = 0;
++		if (parse_anchor(notif->position, &anchor) && anchor != 0) {
++			notif->style.anchor = anchor;
++		} else {
++			fprintf(stderr,
++				"mako: ignoring unknown position '%s' (expected "
++				"top-left, top-center, top-right, center-left, "
++				"center, center-right, bottom-left, bottom-center, "
++				"or bottom-right)\n",
++				notif->position);
++		}
++	}
++
+ 	struct mako_criteria *criteria;
+ 	wl_list_for_each(criteria, criteria_list, link) {
+ 		if (!match_criteria(criteria, notif)) {
+@@ -483,6 +519,7 @@ struct mako_criteria *create_criteria_from_notification(
+ 	criteria->urgency = notif->urgency;
+ 	criteria->category = strdup(notif->category);
+ 	criteria->desktop_entry = strdup(notif->desktop_entry);
++	criteria->position = notif->position ? strdup(notif->position) : NULL;
+ 	criteria->summary = strdup(notif->summary);
+ 	criteria->body = strdup(notif->body);
+ 	criteria->group_index = notif->group_index;
+@@ -519,10 +556,26 @@ bool validate_criteria(struct mako_criteria *criteria) {
+ 		}
+ 	}
+ 
++	// NOTE: a criteria that matches on `position` IS allowed to set the
++	// `anchor` style. The whole point of the position hint is to route
++	// notifications to a different anchor, so the per-position block
++	// naturally wants to override the default. We deliberately do not
++	// add this case to the rejection block above; the only restriction
++	// left for position-matching criteria is the same as for any
++	// other criteria (no `output` / `group-by` style, which would
++	// split a single notification across surfaces).
++
++	// `position` is a per-notification surface selector (it
++	// determines the anchor for the notification's surface), so it
++	// is also a "surface selector" for the purposes of the
++	// max_visible / hidden checks below. Subtract it from the
++	// "any other selector" set so a [position=foo] block is allowed
++	// to set max_visible / hidden without the validator complaining.
+ 	struct mako_criteria_spec copy = {0};
+ 	memcpy(&copy, &criteria->spec, sizeof(struct mako_criteria_spec));
+ 	copy.output = false;
+ 	copy.anchor = false;
++	copy.position = false;
+ 	copy.hidden = false;
+ 	bool any_but_surface = mako_criteria_spec_any(&copy);
+ 
+diff --git a/dbus/xdg.c b/dbus/xdg.c
+index 1f91431..ce10fc5 100644
+--- a/dbus/xdg.c
++++ b/dbus/xdg.c
+@@ -227,6 +227,18 @@ static int handle_notify(sd_bus_message *msg, void *data,
+ 			}
+ 			free(notif->desktop_entry);
+ 			notif->desktop_entry = strdup(desktop_entry);
++		} else if (strcmp(hint, "x-dots-position") == 0) {
++			// Custom vendor-prefixed hint. Lets a notify-send caller
++			// (e.g. ~/.dots/bin/dots-system-notify) ask for a non-default
++			// screen position. Mapped to a layer-shell anchor in
++			// apply_each_criteria after style override.
++			const char *position = NULL;
++			ret = sd_bus_message_read(msg, "v", "s", &position);
++			if (ret < 0) {
++				return ret;
++			}
++			free(notif->position);
++			notif->position = strdup(position);
+ 		} else if (strcmp(hint, "value") == 0) {
+ 			int32_t progress = 0;
+ 			ret = sd_bus_message_read(msg, "v", "i", &progress);
+diff --git a/include/criteria.h b/include/criteria.h
+index 2f03514..bcd2aa8 100644
+--- a/include/criteria.h
++++ b/include/criteria.h
+@@ -34,6 +34,7 @@ struct mako_criteria {
+ 	regex_t body_pattern;
+ 
+ 	char *mode;
++	char *position;
+ 
+ 	// Second-pass matches:
+ 	int group_index;
+diff --git a/include/notification.h b/include/notification.h
+index 48c96f7..59763e3 100644
+--- a/include/notification.h
++++ b/include/notification.h
+@@ -43,6 +43,12 @@ struct mako_notification {
+ 	char *category;
+ 	char *desktop_entry;
+ 	char *tag;
++	// Optional per-notification screen position (e.g. "top-right",
++	// "bottom-center"). Sourced from the x-dots-position D-Bus hint
++	// when present; NULL means "use the global default". When set, the
++	// criteria apply pass will key a layer-shell surface on this
++	// position instead of the global anchor.
++	char *position;
+ 	int32_t progress;
+ 	struct mako_image_data *image_data;
+ 
+diff --git a/include/types.h b/include/types.h
+index a42d80d..20fa460 100644
+--- a/include/types.h
++++ b/include/types.h
+@@ -54,6 +54,7 @@ struct mako_criteria_spec {
+ 	bool summary_pattern;
+ 	bool body;
+ 	bool body_pattern;
++	bool position;
+ 
+ 	bool mode;
+ 
+diff --git a/notification.c b/notification.c
+index b556c1d..addedd8 100644
+--- a/notification.c
++++ b/notification.c
+@@ -49,6 +49,7 @@ void reset_notification(struct mako_notification *notif) {
+ 	free(notif->category);
+ 	free(notif->desktop_entry);
+ 	free(notif->tag);
++	free(notif->position);
+ 	if (notif->image_data != NULL) {
+ 		free(notif->image_data->data);
+ 		free(notif->image_data);
+@@ -61,6 +62,7 @@ void reset_notification(struct mako_notification *notif) {
+ 	notif->category = strdup("");
+ 	notif->desktop_entry = strdup("");
+ 	notif->tag = strdup("");
++	notif->position = NULL;
+ 
+ 	notif->image_data = NULL;
+ 
+@@ -101,6 +103,7 @@ void destroy_notification(struct mako_notification *notif) {
+ 	free(notif->category);
+ 	free(notif->desktop_entry);
+ 	free(notif->tag);
++	free(notif->position);
+ 
+ 	finish_style(&notif->style);
+ 	free(notif);
+diff --git a/types.c b/types.c
+index 3ff3d88..74c2774 100644
+--- a/types.c
++++ b/types.c
+@@ -207,6 +207,8 @@ bool parse_criteria_spec(const char *string, struct mako_criteria_spec *out) {
+ 			out->summary = true;
+ 		} else if (strcmp(token, "body") == 0) {
+ 			out->body = true;
++		} else if (strcmp(token, "position") == 0) {
++			out->position = true;
+ 		} else if (strcmp(token, "grouped") == 0) {
+ 			out->grouped = true;
+ 		} else if (strcmp(token, "group-index") == 0) {
+@@ -247,6 +249,7 @@ bool mako_criteria_spec_any(const struct mako_criteria_spec *spec) {
+ 		spec->summary_pattern ||
+ 		spec->body ||
+ 		spec->body_pattern ||
++		spec->position ||
+ 		spec->none ||
+ 		spec->group_index ||
+ 		spec->grouped ||

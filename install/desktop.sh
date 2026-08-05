@@ -99,16 +99,49 @@ fi
 # ---------------------------------------------------------------------------
 # Patched mako (per-notification position via x-dots-position hint)
 # ---------------------------------------------------------------------------
-# If ~/.local/src/mako is present (cloned with the position-hint branch
-# applied), rebuild and install the patched binary into ~/.local/bin so
-# 'mako' resolves to it. The autostart calls /home/usrtmp/.local/bin/mako
-# by full path, so this is the source of truth for what mako runs.
-if [[ -d "$HOME/.local/src/mako" ]] && command -v meson >/dev/null 2>&1; then
-    echo "==> Rebuilding patched mako from ~/.local/src/mako"
-    (cd "$HOME/.local/src/mako" && ninja -C build >/dev/null 2>&1) \
-        || meson setup build >/dev/null 2>&1 && ninja -C build >/dev/null 2>&1
+# The vanilla mako from the repos cannot put a notification at a
+# per-notification anchor — only one global anchor per instance.
+# The patch in $DOTS/patches/mako-position-hint.patch adds a new
+# x-dots-position D-Bus hint and a [position=foo] criteria selector
+# that the autostart depends on for the bottom-center system OSDs.
+#
+# This step is idempotent and self-contained on a fresh install:
+#   1. If ~/.local/src/mako is absent, clone upstream and apply the
+#      bundled patch (so the position-hint branch is ready to build).
+#   2. meson + ninja build.
+#   3. Install the binary into ~/.local/bin/mako (PATH order: this
+#      is resolved before /usr/bin/mako, and the autostart invokes
+#      it by full path anyway).
+# ---------------------------------------------------------------------------
+MAKO_SRC="$HOME/.local/src/mako"
+MAKO_PATCH="$DOTS/patches/mako-position-hint.patch"
+MAKO_BIN="$HOME/.local/bin/mako"
+
+if command -v meson >/dev/null 2>&1 \
+   && command -v ninja >/dev/null 2>&1 \
+   && command -v git >/dev/null 2>&1; then
+    mkdir -p "$(dirname "$MAKO_SRC")"
+    if [[ ! -d "$MAKO_SRC" ]]; then
+        echo "==> Cloning mako source to $MAKO_SRC"
+        git clone --depth 1 https://github.com/emersion/mako.git "$MAKO_SRC"
+    fi
+    if [[ -f "$MAKO_PATCH" ]]; then
+        echo "==> Applying mako position-hint patch"
+        (cd "$MAKO_SRC" && patch -p1 --dry-run < "$MAKO_PATCH" >/dev/null 2>&1 \
+            || patch -p1 < "$MAKO_PATCH") || true
+    fi
+    echo "==> Building patched mako"
+    if [[ ! -d "$MAKO_SRC/build" ]]; then
+        (cd "$MAKO_SRC" && meson setup build >/dev/null)
+    fi
+    (cd "$MAKO_SRC" && ninja -C build >/dev/null)
     mkdir -p "$HOME/.local/bin"
-    install -m 0755 "$HOME/.local/src/mako/build/mako" "$HOME/.local/bin/mako"
+    install -m 0755 "$MAKO_SRC/build/mako" "$MAKO_BIN"
+else
+    echo "==> Skipping patched-mako build (meson/ninja/git not all available)"
+    echo "    System /usr/bin/mako will be used; per-notification position"
+    echo "    hint will be silently ignored, and bottom-center OSDs will"
+    echo "    fall through to the global default anchor."
 fi
 
 # ---------------------------------------------------------------------------

@@ -5,7 +5,9 @@
 input type:keyboard {
     xkb_layout us,rs,rs
     xkb_variant ,latin,
-    xkb_options ctrl:nocaps,altwin:menu_win
+    # grp:alt_shift_toggle makes Alt+Shift cycle through the XKB
+    # layouts declared above (mirrors default/hypr/input.conf).
+    xkb_options grp:alt_shift_toggle,ctrl:nocaps,altwin:menu_win
     repeat_rate 40
     repeat_delay 600
 }

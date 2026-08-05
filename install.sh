@@ -81,6 +81,7 @@ BASE_SCRIPTS=(
   "$INSTALL/1-paru.sh"
   "$INSTALL/2-identification.sh"
   "$INSTALL/3-terminal.sh"
+  "$INSTALL/keyboard.sh"
   "$INSTALL/4-config.sh"
   "$INSTALL/nvim.sh"
   "$INSTALL/development.sh"
