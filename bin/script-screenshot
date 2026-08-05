@@ -25,15 +25,16 @@ mkdir -p "$SHOT_DIR"
 # (notification width minus borders and padding), aspect preserved,
 # with a small caption bar underneath showing the file path.
 #
-# MUST stay in sync with ~/.dots/current/theme/mako.ini:
+# MUST stay in sync with ~/.dots/current/theme/mako.ini (the
+# [app-name=screenshot] block):
 #   width       = NOTIF_OUTER_WIDTH
 #   border-size = NOTIF_BORDER      (applied on both sides)
 #   padding     = NOTIF_PADDING     (applied on both sides)
-NOTIF_OUTER_WIDTH="${SCREENSHOT_NOTIF_OUTER_WIDTH:-420}"
+NOTIF_OUTER_WIDTH="${SCREENSHOT_NOTIF_OUTER_WIDTH:-600}"
 NOTIF_BORDER="${SCREENSHOT_NOTIF_BORDER:-2}"
-NOTIF_PADDING="${SCREENSHOT_NOTIF_PADDING:-10}"
+NOTIF_PADDING="${SCREENSHOT_NOTIF_PADDING:-12}"
 NOTIF_INNER_WIDTH=$(( NOTIF_OUTER_WIDTH - 2 * NOTIF_BORDER - 2 * NOTIF_PADDING ))
-CAPTION_BAR=32
+CAPTION_BAR=36
 
 ts()      { date +%Y%m%d-%H%M%S; }
 
