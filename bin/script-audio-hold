@@ -1,0 +1,98 @@
+#!/usr/bin/env bash
+# ~/.dots/bin/script-audio-hold
+#
+# Hold-to-repeat for the volume keys. The X11 / Wayland auto-repeat
+# sends key events to focused clients, not to global hotkeys, so a
+# plain `bind = , XF86AudioRaiseVolume, exec, script-audio up`
+# fires once per press. To get the swayosd-style "hold to ramp"
+# behavior we need to (a) get both press AND release events and
+# (b) run a tight adjustment loop between them.
+#
+# Usage (from a `bindl` / `bindsym --hold` style binding):
+#   script-audio-hold up   start
+#   script-audio-hold up   stop
+#   script-audio-hold down start
+#   script-audio-hold down stop
+#
+# The script keeps one PID file per direction under $XDG_RUNTIME_DIR
+# so multiple keys can be pressed independently (mute while vol-up
+# is held, etc.). Adjustments are 1% per loop tick at 20Hz = +20%/s,
+# matching swayosd. The OSD is rate-limited to one notification every
+# 200ms so mako isn't flooded (synchronous=same-app replaces the
+# previous notification in place).
+#
+# Compositor-agnostic: the script doesn't care which compositor fired
+# the press / release. The binding side is what differs — Hyprland
+# uses `bindl = , KEY, exec, ...` and Sway uses
+# `bindsym --rebind $mod+KEY exec ...`. See the comments in the
+# respective bindings files.
+
+set -euo pipefail
+DOTS="${DOTS:-$HOME/.dots}"
+RUNTIME="${XDG_RUNTIME_DIR:-/tmp}"
+DIRECTION="${1:?usage: script-audio-hold up|down start|stop}"
+ACTION="${2:?usage: script-audio-hold up|down start|stop}"
+PIDFILE="$RUNTIME/dots-audio-hold-$DIRECTION.pid"
+SINK="@DEFAULT_AUDIO_SINK@"
+TICK_SEC=0.05       # 50ms = 20Hz adjustment rate
+NOTIFY_TICKS=4      # emit a notification every 4 ticks = ~200ms
+STEP=1              # percent per tick
+
+notify() {
+    ~/.dots/bin/dots-system-notify -a "audio" -h "string:x-canonical-private-synchronous:audio" "$@" >/dev/null 2>&1 || \
+        notify-send -a "audio" -h "string:x-canonical-private-synchronous:audio" "$@" || true
+}
+
+stop_loop() {
+    if [[ -f "$PIDFILE" ]]; then
+        local pid
+        pid=$(cat "$PIDFILE" 2>/dev/null || true)
+        if [[ -n "$pid" ]] && kill "$pid" 2>/dev/null; then
+            wait "$pid" 2>/dev/null || true
+        fi
+        rm -f "$PIDFILE"
+    fi
+}
+
+case "$ACTION" in
+    start)
+        # Already running? Don't start a second one.
+        if [[ -f "$PIDFILE" ]] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            exit 0
+        fi
+        stop_loop
+        (
+            i=0
+            while true; do
+                if [[ $DIRECTION == up ]]; then
+                    wpctl set-volume -l 1.5 "$SINK" "${STEP}%+" >/dev/null 2>&1 || true
+                else
+                    wpctl set-volume -l 1.5 "$SINK" "${STEP}%-" >/dev/null 2>&1 || true
+                fi
+                # Throttle OSD so mako doesn't get 20 notifications per
+                # second. The x-canonical-private-synchronous hint
+                # makes the new notification replace the previous one
+                # in place, so the user sees a smooth bar that
+                # 'follows' the volume as it ramps.
+                if (( i % NOTIFY_TICKS == 0 )); then
+                    vol=$(wpctl get-volume "$SINK" 2>/dev/null | awk '{print int($2*100)}')
+                    [[ -n "$vol" ]] && notify "Volume:  $(printf '%3d' "$vol")%" -h int:value:"$vol"
+                fi
+                i=$(( i + 1 ))
+                sleep "$TICK_SEC"
+            done
+        ) &
+        echo $! > "$PIDFILE"
+        disown 2>/dev/null || true
+        ;;
+    stop)
+        stop_loop
+        # Final OSD so the user sees where the volume ended up.
+        vol=$(wpctl get-volume "$SINK" 2>/dev/null | awk '{print int($2*100)}')
+        [[ -n "$vol" ]] && notify "Volume:  $(printf '%3d' "$vol")%" -h int:value:"$vol"
+        ;;
+    *)
+        echo "script-audio-hold: unknown action '$ACTION' (expected start|stop)" >&2
+        exit 1
+        ;;
+esac

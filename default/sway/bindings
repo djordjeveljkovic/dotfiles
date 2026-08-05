@@ -46,9 +46,15 @@ bindsym $mod+Control+comma exec "makoctl mode -t do-not-disturb && (makoctl mode
 # Media & Hardware
 # -----------------------------------------------------
 
-# Volume & Mic — wpctl via ~/.dots/bin/script-audio (mako feedback)
-bindsym XF86AudioRaiseVolume exec ~/.dots/bin/script-audio up
-bindsym XF86AudioLowerVolume exec ~/.dots/bin/script-audio down
+# Volume & Mic — wpctl via ~/.dots/bin/script-audio (mako feedback).
+# Sway's `bindsym --release` fires on key release. Combine with the
+# plain `bind =` (press) and the hold script to get
+# press = start the 20Hz ramp, release = stop it. Mute keys stay
+# on toggle-on-press (which is what `bind =` does by default).
+bindsym XF86AudioRaiseVolume        exec ~/.dots/bin/script-audio-hold up   start
+bindsym --release XF86AudioRaiseVolume exec ~/.dots/bin/script-audio-hold up   stop
+bindsym XF86AudioLowerVolume        exec ~/.dots/bin/script-audio-hold down start
+bindsym --release XF86AudioLowerVolume exec ~/.dots/bin/script-audio-hold down stop
 bindsym XF86AudioMute       exec ~/.dots/bin/script-audio mute
 bindsym XF86AudioMicMute    exec ~/.dots/bin/script-audio mic
 
