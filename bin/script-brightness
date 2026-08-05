@@ -36,6 +36,15 @@ bar() {
     }'
 }
 
+# Right-aligned percentage in a 3-character field, so the number
+# lines up across notifications:
+#   Brightness:   0%
+#   Brightness:  10%
+#   Brightness: 100%
+format_pct() {
+    awk -v p="$1" 'BEGIN { printf "%3d", p }'
+}
+
 dev_args=()
 [[ -n "$DEVICE" ]] && dev_args=(--device="$DEVICE")
 
@@ -52,13 +61,13 @@ case "${1:-}" in
         brightnessctl set "${STEP}%+" "${dev_args[@]}" >/dev/null
         pct=$(read_pct)
         [[ -z "$pct" ]] && pct=$(brightnessctl info "${dev_args[@]}" | awk -F'[()]' '/Current brightness/{print $2}' | tr -d '%')
-        notify "${pct}%  $(bar "$pct")  Brightness:" -h int:value:"$pct"
+        notify "Brightness:  $(format_pct "$pct")%  $(bar "$pct")" -h int:value:"$pct"
         ;;
     down)
         brightnessctl set "${STEP}%-" "${dev_args[@]}" >/dev/null
         pct=$(read_pct)
         [[ -z "$pct" ]] && pct=$(brightnessctl info "${dev_args[@]}" | awk -F'[()]' '/Current brightness/{print $2}' | tr -d '%')
-        notify "${pct}%  $(bar "$pct")  Brightness:" -h int:value:"$pct"
+        notify "Brightness:  $(format_pct "$pct")%  $(bar "$pct")" -h int:value:"$pct"
         ;;
     -h|--help|help|"")
         sed -n '2,12p' "$0"
