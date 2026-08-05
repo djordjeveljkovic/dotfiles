@@ -1,14 +1,50 @@
-#!/bin/bash
+#!/usr/bin/env bash
+# Toggle night light via the compositor-appropriate tool.
+#   Hyprland  -> hyprsunset   (Hyprland's native wlr-gamma-control
+#                             client; tiny C binary, no geolocation
+#                             or Python deps; installed by
+#                             install/compositor-hyprland.sh)
+#   Sway/else -> wlsunset     (the generic Wayland equivalent;
+#                             installed by install/desktop.sh's
+#                             shared base)
+# Both daemons use the same toggle pattern: if running, kill it,
+# otherwise start it with a 4000K / gamma 100 night preset.
+# The "-t 4000 -g 100" is the hyprsunset syntax; wlsunset uses
+# "-T 4000 -g 1.0" (different gamma semantics — 1.0 = no change
+# in wlsunset vs 100 = no change in hyprsunset). The notification
+# uses the position-hint wrapper so the OSD lands at bottom-center.
 
-# Toggle night light via wlsunset (lighter than gammastep: tiny C daemon,
-# wlr-gamma-control only, no geolocation/Python deps).
-# -T 4000  -> night temperature in Kelvin
-# -g 0.5   -> gamma multiplier (0.5 = 50% dim)
+set -euo pipefail
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh"
 
-if pgrep -x wlsunset >/dev/null 2>&1; then
-    pkill wlsunset
-    notify-send "Night light" "Off"
-else
-    wlsunset -T 4000 -g 0.5 &
-    notify-send "Night light" "On (4000K, 50%)"
-fi
+run_notify() {
+    # Same dispatcher as script-{audio,brightness,media,notify-layout}
+    if [[ -x "$DOTS/bin/dots-system-notify" ]]; then
+        "$DOTS/bin/dots-system-notify" -a "night-light" "$@"
+    else
+        notify-send -a "night-light" "$@"
+    fi
+}
+
+case "$(dots_compositor)" in
+    hyprland)
+        if pgrep -x hyprsunset >/dev/null 2>&1; then
+            pkill -x hyprsunset
+            run_notify "Night light" "Off"
+        else
+            hyprsunset -t 4000 -g 100 &
+            run_notify "Night light" "On (4000K, gamma 100)"
+        fi
+        ;;
+    sway|*)
+        if pgrep -x wlsunset >/dev/null 2>&1; then
+            pkill wlsunset
+            run_notify "Night light" "Off"
+        else
+            wlsunset -T 4000 -g 1.0 &
+            run_notify "Night light" "On (4000K, gamma 1.0)"
+        fi
+        ;;
+esac
