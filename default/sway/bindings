@@ -33,7 +33,7 @@ bindsym $mod+Shift+n exec ~/.dots/bin/script-toggle-theme
 
 # Scripts & Info
 bindsym $mod+Control+i exec ~/.dots/bin/script-toggle-idle
-bindsym $mod+i exec $terminal --class=com.x.FloatingWindow -o font.size=24 -e ~/.dots/bin/script-info
+bindsym $mod+i exec ~/.dots/bin/script-info
 bindsym $mod+Shift+p exec ~/.dots/bin/script-show-keybindings
 bindsym $mod+v exec "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"
 

@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+# ~/.dots/bin/dots-system-notify-center
+#
+# notify-send wrapper that tags the notification with the
+# x-dots-position:center D-Bus hint so the patched mako (see
+# ~/.local/src/mako branch position-hint) routes it to the
+# center-of-screen layer-shell surface instead of the default
+# top-right one.
+#
+# Used by script-info for the $mod+i system-info OSD. Sibling
+# wrapper to dots-system-notify (which routes to bottom-center
+# for volume / brightness / mic / media / keyboard layout).
+#
+# On an unpatched mako (e.g. system /usr/bin/mako on a fresh
+# install before the custom binary is built) the hint is silently
+# ignored and the notification lands at the global default anchor
+# (top-right). That is a graceful fallback — no crash, no
+# misrouting — just no center UX.
+#
+# Usage is identical to notify-send:
+#   dots-system-notify-center -a info "System Info" "body text"
+
+set -euo pipefail
+
+# Prepend the position hint, keep every other argument the caller
+# passed. The hint must come before the summary because notify-send
+# parses positional args from left to right.
+exec notify-send -h "string:x-dots-position:center" "$@"

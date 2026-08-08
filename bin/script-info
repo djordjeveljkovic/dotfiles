@@ -1,13 +1,15 @@
 #!/usr/bin/env bash
-# script-info — minimal system info TUI for $mod+i
-# Stats: time, date, network, IP, temps, battery, power profile.
-# Keys: [c] copy ip · [m] power mode · [r] refresh · [q] quit.
-# Runs inside a floating terminal; closing the window terminates it.
+# script-info — system info OSD for $mod+i
+# Sends a single mako notification at screen center via the
+# patched mako's x-dots-position hint, then exits. No terminal,
+# no interactive loop. The notification auto-dismisses via
+# mako's default-timeout — that's it.
+#
+# Replaces the previous terminal-based TUI.
 
-# NOTE: deliberately no `set -e`. This is an interactive script that must
-# keep running even if one data collector (sensors, hostname, ping, etc.)
-# exits non-zero on a missing sensor / no network / etc.
-set -u
+# No `set -e`: a missing sensor / no network / no battery should
+# not kill the script — the collectors already emit sane fallbacks.
+
 shopt -s nullglob   # so /sys/class/power_supply/BAT* expands to empty when no battery
 
 # collectors — every function returns 0 and emits a sane fallback ──────────
@@ -38,10 +40,10 @@ bat() {
         [ -r "$d/capacity" ] && [ -r "$d/status" ] || continue
         cap=$(cat "$d/capacity" 2>/dev/null) || cap="?"
         stat=$(cat "$d/status" 2>/dev/null) || stat="?"
-        printf '%s%% (%s)\n' "$cap" "${stat,,}"
+        printf '%s%% (%s)' "$cap" "${stat,,}"
         return
     done
-    echo "plugged in (no battery)"
+    echo "plugged in"
 }
 
 pmode() {
@@ -50,61 +52,32 @@ pmode() {
         || echo "n/a"
 }
 
-# render ─────────────────────────────────────────────────
-render() {
-    local i n t b p
-    i=$(ip || true);    [ -z "${i:-}" ] && i="—"
-    n=$(net || true)
-    t=$(temps || true); [ -z "${t:-}" ] && t="—"
-    b=$(bat || true)
-    p=$(pmode || true)
-
-    printf '\033[H\033[2J'
-    echo "──────────────────────────────────────────────────"
+# Build body ─────────────────────────────────────────────
+body="$(
     printf '  %-8s %s\n' time    "$(date '+%H:%M:%S')"
     printf '  %-8s %s\n' date    "$(date '+%A %d %B %Y')"
-    printf '  %-8s %s\n' network "$n"
-    printf '  %-8s %s\n' ip      "$i"
-    printf '  %-8s %s\n' temps   "$t"
-    printf '  %-8s %s\n' battery "$b"
-    printf '  %-8s %s\n' power   "$p"
-    echo "──────────────────────────────────────────────────"
-    echo "  [c] copy ip   [m] power mode   [r] refresh   [q] quit"
-    echo
+    printf '  %-8s %s\n' network "$(net)"
+    printf '  %-8s %s\n' ip      "$(ip)"
+    printf '  %-8s %s\n' temps   "$(temps)"
+    printf '  %-8s %s\n' battery "$(bat)"
+    printf '  %-8s %s'   power   "$(pmode)"
+)"
+
+# Send notification. dots-system-notify-center tags the
+# notification with x-dots-position:center so the patched
+# mako (branch position-hint, see patches/ in this repo)
+# routes it to the center layer-shell surface. On an
+# unpatched mako the hint is silently ignored — the
+# notification still shows up at the default anchor.
+#
+# x-canonical-private-synchronous:info replaces any previous
+# info notification in place, so spamming $mod+i doesn't
+# stack up multiple OSDs.
+notify() {
+    command -v ~/.dots/bin/dots-system-notify-center >/dev/null \
+        && ~/.dots/bin/dots-system-notify-center -a "info" -h "string:x-canonical-private-synchronous:info" "$@" \
+        || notify-send -a "info" -h "string:x-canonical-private-synchronous:info" "$@" \
+        || true
 }
 
-# actions ────────────────────────────────────────────────
-set_power() {
-    local mode avail
-    avail=$(powerprofilesctl list 2>/dev/null \
-        | awk -F: '/^[[:space:]]+[a-z-]+:[[:space:]]*$/{gsub(/[[:space:]]/,"",$1);print $1}' \
-        | paste -sd '/' -)
-    [ -z "${avail:-}" ] && { echo "  no modes found"; sleep 1; return; }
-    echo "  available: $avail"
-    read -r -p "  set ▸ " mode || return
-    [ -z "${mode:-}" ] && { echo "  cancelled"; sleep 1; return; }
-    if powerprofilesctl set "$mode" 2>/dev/null; then
-        echo "  ✓ power → $mode"
-    else
-        echo "  ✘ failed (typo or need root?)"
-    fi
-    sleep 1
-}
-
-# main ───────────────────────────────────────────────────
-trap 'exit 0' INT TERM
-render
-while :; do
-    read -r -n 1 -p "  ▸ " key || { echo; exit 0; }
-    echo
-    case "${key:-q}" in
-        c) wl-copy <<<"$(ip)" 2>/dev/null \
-            && echo "  ✓ ip copied" \
-            || echo "  ✘ wl-copy not available"
-           sleep 1 ;;
-        m) set_power ;;
-        r) render ;;
-        q) exit 0 ;;
-        *) echo "  unknown key"; sleep 1 ;;
-    esac
-done
+notify "System Info" "$body"
