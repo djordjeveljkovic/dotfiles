@@ -8,12 +8,35 @@ Host buster
     HostName 213.139.204.176
     User busterrs
     IdentityFile ~/.ssh/id_key
+
 Host prosoftis
     HostName prosoftis.com
     User prosofti
     IdentityFile ~/.ssh/id_key
 
+Host mare_vps
+    HostName 158.220.100.27
+    User root
+    Port 22
+    PasswordAuthentication yes
+
+Host mare_vps_2_devadmin
+    HostName 185.218.124.173
+    User devadmin
+    IdentityFile ~/.ssh/id_key
+
+Host mare_vps_2
+    HostName 185.218.124.173
+    User root
+    Port 22
+    PasswordAuthentication yes
+
 Host minipc
-    HostName 192.168.0.105
+    HostName 192.168.0.102
+    User usr
+    IdentityFile ~/.ssh/home-server
+
+Host pi
+    HostName raspberrypi.local
     User usr
     IdentityFile ~/.ssh/id_key
