@@ -5,16 +5,49 @@
 # no interactive loop. The notification auto-dismisses via
 # mako's default-timeout — that's it.
 #
-# Replaces the previous terminal-based TUI.
+# Body: 18 flat key/value rows in logical groups:
+#   date, time, uptime, kernel     — Time/system
+#   battery, power, temps,         — Hardware
+#   memory, disk,
+#   volume, mic,                   — Audio
+#   layout, ws, windows,           — Compositor
+#   ip, lan, ping, network         — Network
 
 # No `set -e`: a missing sensor / no network / no battery should
 # not kill the script — the collectors already emit sane fallbacks.
 
 shopt -s nullglob   # so /sys/class/power_supply/BAT* expands to empty when no battery
 
-# collectors — every function returns 0 and emits a sane fallback ──────────
-ip()    { hostname -I 2>/dev/null | awk '{print $1; exit}' || true; }
-net()   { ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1 && echo online || echo offline; }
+DOTS="${DOTS:-$HOME/.dots}"
+# shellcheck disable=SC1091
+. "$DOTS/lib/helpers.sh" 2>/dev/null || true
+
+# ─── collectors ─────────────────────────────────────────────────────────
+# Each function returns 0 and emits a sane fallback string on failure.
+
+date_()   { date '+%A %d %B %Y'; }
+time_()   { date '+%H:%M:%S'; }
+uptime_() { uptime -p 2>/dev/null | sed 's/^up //' || echo "n/a"; }
+kernel_() { uname -r; }
+
+battery() {
+    local d cap stat
+    for d in /sys/class/power_supply/BAT*; do
+        [ -d "$d" ] || continue
+        [ -r "$d/capacity" ] && [ -r "$d/status" ] || continue
+        cap=$(cat "$d/capacity" 2>/dev/null) || cap="?"
+        stat=$(cat "$d/status" 2>/dev/null) || stat="?"
+        printf '%s%% (%s)' "$cap" "${stat,,}"
+        return
+    done
+    echo "plugged in"
+}
+
+power() {
+    command -v powerprofilesctl >/dev/null 2>&1 \
+        && powerprofilesctl get 2>/dev/null \
+        || echo "n/a"
+}
 
 temps() {
     local out=""
@@ -33,34 +66,183 @@ temps() {
     printf '%s' "${out:-n/a}"
 }
 
-bat() {
-    local d cap stat
-    for d in /sys/class/power_supply/BAT*; do
-        [ -d "$d" ] || continue
-        [ -r "$d/capacity" ] && [ -r "$d/status" ] || continue
-        cap=$(cat "$d/capacity" 2>/dev/null) || cap="?"
-        stat=$(cat "$d/status" 2>/dev/null) || stat="?"
-        printf '%s%% (%s)' "$cap" "${stat,,}"
-        return
-    done
-    echo "plugged in"
-}
-
-pmode() {
-    command -v powerprofilesctl >/dev/null 2>&1 \
-        && powerprofilesctl get 2>/dev/null \
+memory() {
+    free -h 2>/dev/null \
+        | awk '/^Mem:/{printf "%s/%s (%d%%)", $3, $2, int($3/$2*100)}' \
         || echo "n/a"
 }
 
-# Build body ─────────────────────────────────────────────
+disk() {
+    df -h / 2>/dev/null \
+        | awk 'NR==2{printf "%s/%s (%s)", $3, $2, $5}' \
+        || echo "n/a"
+}
+
+# volume / mic — wpctl get-volume includes "[MUTED]" in its output for
+# both sink and source in modern wireplumber, so one call per side is
+# enough. Fall back to pactl on wpctl failure.
+volume() {
+    local line pct mute="unmuted"
+    line=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null) || line=""
+    if [[ -n "$line" && "$line" != Usage:* ]]; then
+        pct=$(awk '{print int($2*100)}' <<<"$line")
+        [[ "$line" == *"[MUTED]"* ]] && mute="muted"
+        printf '%d%% %s' "$pct" "$mute"
+        return
+    fi
+    line=$(pactl get-sink-mute @DEFAULT_SINK@ 2>/dev/null) || line=""
+    [[ "${line,,}" == *"yes"* ]] && mute="muted"
+    pct=$(pactl get-sink-volume @DEFAULT_SINK@ 2>/dev/null \
+        | awk '/Volume/{for(i=1;i<=NF;i++)if($i~/%/){gsub(/[% ]/,"",$i);print $i;exit}}') || pct=""
+    if [[ -n "$pct" ]]; then
+        printf '%s%% %s' "$pct" "$mute"
+    else
+        echo "n/a"
+    fi
+}
+
+mic() {
+    local line pct state="unmuted"
+    line=$(wpctl get-volume @DEFAULT_AUDIO_SOURCE@ 2>/dev/null) || line=""
+    if [[ -n "$line" && "$line" != Usage:* ]]; then
+        pct=$(awk '{print int($2*100)}' <<<"$line")
+        [[ "$line" == *"[MUTED]"* ]] && state="muted"
+        printf '%d%% %s' "$pct" "$state"
+        return
+    fi
+    line=$(pactl get-source-mute @DEFAULT_SOURCE@ 2>/dev/null) || line=""
+    [[ "${line,,}" == *"yes"* ]] && state="muted"
+    pct=$(pactl get-source-volume @DEFAULT_SOURCE@ 2>/dev/null \
+        | awk '/Volume/{for(i=1;i<=NF;i++)if($i~/%/){gsub(/[% ]/,"",$i);print $i;exit}}') || pct=""
+    if [[ -n "$pct" ]]; then
+        printf '%s%% %s' "$pct" "$state"
+    else
+        echo "n/a"
+    fi
+}
+
+# layout / ws / windows — compositor-specific IPC. Each makes at most
+# one swaymsg/hyprctl call so total IPC overhead is bounded.
+layout() {
+    case "$(dots_compositor 2>/dev/null || echo unknown)" in
+        sway)
+            local name
+            name=$(swaymsg -t get_inputs -r 2>/dev/null \
+                | jq -r '.[] | select(.type=="keyboard") | .xkb_active_layout_name // empty' \
+                2>/dev/null | head -1) || name=""
+            if [[ -n "$name" ]]; then
+                printf '%s' "$name"
+            else
+                local idx
+                idx=$(swaymsg -t get_inputs -r 2>/dev/null \
+                    | jq -r '.[] | select(.type=="keyboard") | .xkb_active_layout_index // 0' \
+                    2>/dev/null | head -1) || idx=""
+                if [[ -n "$idx" ]]; then
+                    printf 'Layout %d' "$((idx + 1))"
+                else
+                    echo "n/a"
+                fi
+            fi
+            ;;
+        hyprland)
+            local name
+            name=$(hyprctl devices -j 2>/dev/null \
+                | jq -r '.keyboards[] | select(.main==true) | .active_keymap // empty' \
+                2>/dev/null | head -1) || name=""
+            [[ -n "$name" ]] && printf '%s' "$name" || echo "n/a"
+            ;;
+        *) echo "n/a" ;;
+    esac
+}
+
+ws() {
+    case "$(dots_compositor 2>/dev/null || echo unknown)" in
+        sway)
+            local name
+            name=$(swaymsg -t get_workspaces -r 2>/dev/null \
+                | jq -r '.[] | select(.focused==true) | .name // empty' \
+                2>/dev/null | head -1) || name=""
+            [[ -n "$name" ]] && printf '%s' "$name" || echo "n/a"
+            ;;
+        hyprland)
+            # Show name if it's set and not just the id; otherwise show id.
+            local v
+            v=$(hyprctl activeworkspace -j 2>/dev/null \
+                | jq -r 'if (.name // "") != "" and (.name|tostring) != (.id|tostring) then .name else (.id|tostring) end' \
+                2>/dev/null) || v=""
+            [[ -n "$v" ]] && printf '%s' "$v" || echo "n/a"
+            ;;
+        *) echo "n/a" ;;
+    esac
+}
+
+# Count of open windows + per-workspace breakdown, e.g. "5 (1:2, 4:1, 5:2)".
+windows() {
+    case "$(dots_compositor 2>/dev/null || echo unknown)" in
+        sway)
+            # A real window has .pid set; split containers do not.
+            swaymsg -t get_tree -r 2>/dev/null | jq -r '
+                ([recurse | objects | select(.type?=="con" and .pid?)] | length) as $total |
+                ([recurse | objects | select(.type?=="con" and .pid?)]
+                 | group_by(.workspace)
+                 | map("\(.[0].workspace):\(length)") | join(", ")) as $per |
+                "\($total) (\($per))"
+            ' 2>/dev/null || echo "n/a"
+            ;;
+        hyprland)
+            hyprctl clients -j 2>/dev/null | jq -r '
+                length as $total |
+                (group_by(.workspace.id)
+                 | map("\(.[0].workspace.id):\(length)") | join(", ")) as $per |
+                "\($total) (\($per))"
+            ' 2>/dev/null || echo "n/a"
+            ;;
+        *) echo "n/a" ;;
+    esac
+}
+
+# public IP via ifconfig.me. -m 3 caps the wait so a network outage
+# adds at most 3s before falling back to "offline".
+ip_pub() {
+    local v
+    v=$(curl -s -m 3 ifconfig.me 2>/dev/null) || v=""
+    [[ -n "$v" ]] && printf '%s' "$v" || echo "offline"
+}
+
+ip_lan() { hostname -I 2>/dev/null | awk '{print $1; exit}' || true; }
+
+# Round-trip time to 1.1.1.1 in ms. Empty on failure → "offline".
+ping_ms() {
+    local v
+    v=$(ping -c 1 -W 2 1.1.1.1 2>/dev/null \
+        | awk -F'/' '/^rtt/{print $5"ms"}') || v=""
+    [[ -n "$v" ]] && printf '%s' "$v" || echo "offline"
+}
+
+network() {
+    ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1 && echo online || echo offline
+}
+
+# ─── body ──────────────────────────────────────────────────────────────
 body="$(
-    printf '  %-8s %s\n' time    "$(date '+%H:%M:%S')"
-    printf '  %-8s %s\n' date    "$(date '+%A %d %B %Y')"
-    printf '  %-8s %s\n' network "$(net)"
-    printf '  %-8s %s\n' ip      "$(ip)"
+    printf '  %-8s %s\n' date    "$(date_)"
+    printf '  %-8s %s\n' time    "$(time_)"
+    printf '  %-8s %s\n' uptime  "$(uptime_)"
+    printf '  %-8s %s\n' kernel  "$(kernel_)"
+    printf '  %-8s %s\n' battery "$(battery)"
+    printf '  %-8s %s\n' power   "$(power)"
     printf '  %-8s %s\n' temps   "$(temps)"
-    printf '  %-8s %s\n' battery "$(bat)"
-    printf '  %-8s %s'   power   "$(pmode)"
+    printf '  %-8s %s\n' memory  "$(memory)"
+    printf '  %-8s %s\n' disk    "$(disk)"
+    printf '  %-8s %s\n' volume  "$(volume)"
+    printf '  %-8s %s\n' mic     "$(mic)"
+    printf '  %-8s %s\n' layout  "$(layout)"
+    printf '  %-8s %s\n' ws      "$(ws)"
+    printf '  %-8s %s\n' windows "$(windows)"
+    printf '  %-8s %s\n' ip      "$(ip_pub)"
+    printf '  %-8s %s\n' lan     "$(ip_lan)"
+    printf '  %-8s %s\n' ping    "$(ping_ms)"
+    printf '  %-8s %s'   network "$(network)"
 )"
 
 # Send notification. dots-system-notify-center tags the
