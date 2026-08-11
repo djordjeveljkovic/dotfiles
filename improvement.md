@@ -531,6 +531,7 @@ Three public repos under the `pi-` namespace are the user-facing surface of pi e
 |---|---|---|
 | [`djordjeveljkovic/pi-list-picker`](https://github.com/djordjeveljkovic/pi-list-picker) | `~/.pi/agent/extensions/list-picker/` | TUI component (npm package, peer-dep for skill-manager) |
 | [`djordjeveljkovic/pi-skill-manager`](https://github.com/djordjeveljkovic/pi-skill-manager) | `~/.pi/agent/extensions/skill-manager/` | Extension: `/skills`, `/skills:list`, `/skills:manage`, `skill_list`/`skill_toggle`/`skill_reload` tools |
+| [`djordjeveljkovic/pi-workflow`](https://github.com/djordjeveljkovic/pi-workflow) | `~/.pi/agent/extensions/workflow/` | Extension: `/workflow quick\|plan\|ask` + `wf_project_info`, `wf_note`, `wf_ask_question`, `wf_plan_save` tools |
 | [`djordjeveljkovic/pi-skills-library`](https://github.com/djordjeveljkovic/pi-skills-library) | `~/.pi/agent/skills-library/` | 85 `SKILL.md` files across 10 collections (playwright, docmd, axi, toon-format, ui-ux-pro-max, find-skills, skill-manager, aif-collection, books-collection, ruflo-collection) |
 
 **Why this lives outside `~/.dots`:** pi reads from `~/.pi/agent/` (XDG-style, per-user agent home). Keeping the repos there — owned by pi, not symlinked from `~/.dots/config/pi/` — means `git pull` inside each repo updates the live install without re-running the dotfiles installer.
@@ -541,6 +542,7 @@ Three public repos under the `pi-` namespace are the user-facing surface of pi e
 mkdir -p ~/.pi/agent/extensions
 gh repo clone djordjeveljkovic/pi-list-picker      ~/.pi/agent/extensions/list-picker
 gh repo clone djordjeveljkovic/pi-skill-manager    ~/.pi/agent/extensions/skill-manager
+gh repo clone djordjeveljkovic/pi-workflow         ~/.pi/agent/extensions/workflow
 gh repo clone djordjeveljkovic/pi-skills-library   ~/.pi/agent/skills-library
 
 (cd ~/.pi/agent/extensions/skill-manager && npm install)

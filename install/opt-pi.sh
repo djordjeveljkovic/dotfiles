@@ -31,11 +31,16 @@ clone_or_pull() {
 
 clone_or_pull pi-list-picker    "$EXT_DIR/list-picker"
 clone_or_pull pi-skill-manager  "$EXT_DIR/skill-manager"
+clone_or_pull pi-workflow       "$EXT_DIR/workflow"
 clone_or_pull pi-skills-library "$PI_AGENT/skills-library"
 
 # --- Install skill-manager deps (pulls pi-list-picker + typebox) ------
 echo "==> npm install in skill-manager"
 (cd "$EXT_DIR/skill-manager" && npm install --omit=dev)
+
+# --- Install workflow deps (typebox) --------------------------------
+echo "==> npm install in workflow"
+(cd "$EXT_DIR/workflow" && npm install --omit=dev)
 
 # --- Register extensions in settings.json -----------------------------
 mkdir -p "$PI_AGENT"
@@ -51,6 +56,7 @@ settings.extensions = settings.extensions || [];
 const want = [
   'extensions/skill-manager',
   'extensions/list-picker/extension.ts',
+  'extensions/workflow',
 ];
 let changed = false;
 for (const e of want) {
@@ -70,7 +76,12 @@ echo "  /skills:list            TUI: browse + toggle + filter"
 echo "  /skills:manage          enable/disable/all/reset"
 echo "  /skills:status          library path + counts"
 echo
+echo "  /workflow quick <text>  insert prompt with project context"
+echo "  /workflow plan  <goal>  research -> clarify -> plan -> .pi/PLAN.md"
+echo "  /workflow ask   <q>     free Q&A with project context"
+echo
 echo "Installed under:"
 echo "  $EXT_DIR/list-picker/"
 echo "  $EXT_DIR/skill-manager/"
+echo "  $EXT_DIR/workflow/"
 echo "  $PI_AGENT/skills-library/   (85 SKILL.md files)"

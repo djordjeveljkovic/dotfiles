@@ -40,7 +40,7 @@ git clone git@github.com:djordjeveljkovic/dotfiles.git ~/.dots
 ├── lib/helpers.sh          # shared helpers for script-manage-*
 ├── config/                 # symlinked into ~/.config/ at install time
 ├── default/                # bash/  sway/  gpg/  .tmux.conf
-├── current/theme/          # ONE active theme (alacritty, mako, btop, waybar.css, sway.conf)
+├── current/theme/          # ONE active theme (alacritty, mako, fuzzel, btop, waybar.css, sway.conf)
 ├── assets/                 # background + walls + plymouth image
 └── .gitignore
 ```
@@ -131,7 +131,8 @@ Three public `djordjeveljkovic/pi-*` repos are installed under `~/.pi/agent/`:
 ```
 ~/.pi/agent/extensions/list-picker/   # TUI list component (peer dep)
 ~/.pi/agent/extensions/skill-manager/ # /skills commands, skill_list/toggle/reload tools
+~/.pi/agent/extensions/workflow/      # /workflow quick|plan|ask + wf_* tools
 ~/.pi/agent/skills-library/           # 85 SKILL.md files across 10 collections
 ```
 
-Reinstall with `gh repo clone …` + `(cd skill-manager && npm install)`; see `improvement.md §13` for details.
+Reinstall with `gh repo clone …` + `(cd skill-manager && npm install)` + `(cd workflow && npm install)`; see `improvement.md §13` for details.
