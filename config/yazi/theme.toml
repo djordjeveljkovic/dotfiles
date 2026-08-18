@@ -95,9 +95,13 @@ separator = " → "
 [notify]
 title     = { fg = "#8caaee", bold = true }
 body      = { fg = "#cad3f5" }
-icon_info = { fg = "#8caaee" }
-icon_warn = { fg = "#f9e2af" }
-icon_error = { fg = "#ed8796" }
+# icon_* are placeholder strings (the character / glyph to render), not
+# styles. Previous theme had them as `{ fg = "..." }` maps, which yazi
+# rejects with "invalid type: map, expected a string" at load time,
+# silently falling back to its built-in defaults. Use Unicode glyphs.
+icon_info  = "ℹ"
+icon_warn  = "⚠"
+icon_error = "✖"
 level_info = { bg = "#181926" }
 level_warn = { bg = "#3a2a1a" }
 level_error = { bg = "#3a1a1a" }

@@ -20,6 +20,7 @@ SCHEMA="org.gnome.desktop.interface"
 required_theme_files=(
     alacritty.toml
     btop.theme
+    fuzzel.ini
     hyprland.conf
     hyprlock.conf
     mako.ini
@@ -99,8 +100,8 @@ if [[ -L $ACTIVE_LINK || -e $ACTIVE_LINK ]]; then
 fi
 ln -s "../themes/$(basename "$source_theme")" "$ACTIVE_LINK"
 
-# 3. Update the legacy dotfiles-managed mako/btop symlinks.
-mkdir -p "$HOME/.config/mako" "$HOME/.config/btop/themes"
+# 3. Update the legacy dotfiles-managed mako/btop/fuzzel symlinks.
+mkdir -p "$HOME/.config/mako" "$HOME/.config/btop/themes" "$HOME/.config/fuzzel"
 [[ -L $HOME/.config/mako/config || ! -e $HOME/.config/mako/config ]] && \
     ln -sf "$source_theme/mako.ini" "$HOME/.config/mako/config"
 # The [position=bottom-center] criteria block in mako.ini routes
@@ -108,6 +109,10 @@ mkdir -p "$HOME/.config/mako" "$HOME/.config/btop/themes"
 # daemon. No second config file needed.
 [[ -L $HOME/.config/btop/themes/current.theme || ! -e $HOME/.config/btop/themes/current.theme ]] && \
     ln -sf "$source_theme/btop.theme" "$HOME/.config/btop/themes/current.theme"
+# Fuzzel reads ~/.config/fuzzel/fuzzel.ini at launch. Point it at
+# the themed file so dark/light toggle also retheme's the launcher.
+[[ -L $HOME/.config/fuzzel/fuzzel.ini || ! -e $HOME/.config/fuzzel/fuzzel.ini ]] && \
+    ln -sf "$source_theme/fuzzel.ini" "$HOME/.config/fuzzel/fuzzel.ini"
 
 # 4. System-wide color-scheme preference. This is the single source of
 #    truth exposed through xdg-desktop-portal and respected by GTK,

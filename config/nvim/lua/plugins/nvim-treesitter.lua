@@ -1,7 +1,10 @@
 return {
     {
         "nvim-treesitter/nvim-treesitter",
-        version = false,
+        -- Pin to last v0 release: the `main` branch is the v3 rewrite which
+        -- removed `nvim-treesitter.configs` and `:TSUpdate`. v0.9.x keeps the
+        -- `require('nvim-treesitter.configs').setup({...})` API used below.
+        version = "v0.9.1",
         build = ":TSUpdate",
         event = { "BufReadPost", "BufNewFile" },
         dependencies = {

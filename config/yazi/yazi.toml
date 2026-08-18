@@ -2,9 +2,14 @@
 # Yazi — terminal file manager
 # Docs: https://yazi-rs.github.io/docs/configuration
 # =====================================================
-# Image preview: alacritty has no native graphics protocol, so install
-# ueberzugpp (X11/Wayland window-system protocol) and keep `image = "auto"`
-# — yazi will pick it up automatically.
+# Image preview: this distro's /usr/bin/alacritty is not built with the
+# `--features=sixel` Cargo flag, so yazi's `auto` adapter falls back to
+# `ueberzugpp`, which uses wlr-layer-shell and pops a separate client
+# surface over the terminal instead of rendering inline. Force the chafa
+# adapter (chafa is in the base image) so previews are true inline
+# ANSI/Unicode art in the preview pane. To get pixel-accurate inline
+# previews instead, rebuild alacritty with `cargo install alacritty
+# --features=sixel,wayland` and switch this back to `auto`.
 
 # ---- Manager (file list) -----------------------------------------------
 [manager]
@@ -23,16 +28,26 @@ title_format   = "{cwd} — Yazi"
 
 # ---- Preview pane --------------------------------------------------------
 [preview]
-# Image protocol: "auto" picks the best for the current terminal.
-# alacritty: install ueberzugpp (sudo pacman -S ueberzugpp) for real images.
-image            = "auto"
+# Image protocol: forced to "chafa" so inline previews work on stock
+# alacritty. See the top-of-file note for the reason.
+image            = "chafa"
 image_filter     = "triangle"   # nearest | triangle | catmull-rom | lanczos3
 image_quality    = 75           # 50-90
 max_width        = 1600
 max_height       = 1200
 cache_dir        = ""           # empty = $XDG_CACHE_HOME/yazi
-# ueberzug_scale  = 1
-# ueberzug_offset = [0, 0, 0, 0]
+
+# chafa-specific tuning. Higher symbols/pixels per cell give a sharper
+# preview but eat more rows; symbols = "all" enables Unicode half-block
+# + braille so the image reads as a real picture, not an ASCII sketch.
+[chafa]
+format = "symbols"
+symbols = "all"
+dither = "none"
+workaround = "none"
+# Default fg/bg keep the preview from clashing with the rest of the UI.
+fg = "cad3f5"
+bg = "24273a"
 
 # File-type specific preview scripts live in ~/.config/yazi/plugins/.
 # Code highlighting, directory listing, archive listing, etc. are handled
