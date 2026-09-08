@@ -14,19 +14,8 @@ Host prosoftis
     User prosofti
     IdentityFile ~/.ssh/id_key
 
-Host mare_vps
-    HostName 158.220.100.27
-    User root
-    Port 22
-    PasswordAuthentication yes
-
-Host mare_vps_2_devadmin
-    HostName 185.218.124.173
-    User devadmin
-    IdentityFile ~/.ssh/id_key
-
-Host mare_vps_2
-    HostName 185.218.124.173
+Host vps
+    HostName 169.58.235.158
     User root
     Port 22
     PasswordAuthentication yes
