@@ -1,9 +1,18 @@
 #!/usr/bin/env bash
 # script-info — system info OSD for $mod+i
-# Sends a single mako notification at screen center via the
-# patched mako's x-dots-position hint, then exits. No terminal,
-# no interactive loop. The notification auto-dismisses via
-# mako's default-timeout — that's it.
+# Shows the stats as a centered floating zenity --list dialog
+# (Key | Value columns, header hidden), then exits. No terminal,
+# no interactive loop. Lifecycle:
+#   * auto-closes after 8s (--timeout, same as the old mako
+#     default-timeout for [position=center]);
+#   * pressing $mod+i again closes it early (toggle) — the dialog
+#     pid is tracked in $XDG_RUNTIME_DIR/dots-info-osd.pid because
+#     zenity has no mako-style replace-in-place hint;
+#   * floating/centering/size come from the compositor window
+#     rules (default/hypr/windows.conf float-info-osd,
+#     default/sway/windows for_window [app_id="zenity"]), since
+#     zenity --list is a resizable toplevel that would tile.
+# Compositor-agnostic: works identically on Hyprland and Sway.
 #
 # Body: 18 flat key/value rows in logical groups:
 #   date, time, uptime, kernel     — Time/system
@@ -224,42 +233,73 @@ network() {
 }
 
 # ─── body ──────────────────────────────────────────────────────────────
-body="$(
-    printf '  %-8s %s\n' date    "$(date_)"
-    printf '  %-8s %s\n' time    "$(time_)"
-    printf '  %-8s %s\n' uptime  "$(uptime_)"
-    printf '  %-8s %s\n' kernel  "$(kernel_)"
-    printf '  %-8s %s\n' battery "$(battery)"
-    printf '  %-8s %s\n' power   "$(power)"
-    printf '  %-8s %s\n' temps   "$(temps)"
-    printf '  %-8s %s\n' memory  "$(memory)"
-    printf '  %-8s %s\n' disk    "$(disk)"
-    printf '  %-8s %s\n' volume  "$(volume)"
-    printf '  %-8s %s\n' mic     "$(mic)"
-    printf '  %-8s %s\n' layout  "$(layout)"
-    printf '  %-8s %s\n' ws      "$(ws)"
-    printf '  %-8s %s\n' windows "$(windows)"
-    printf '  %-8s %s\n' ip      "$(ip_pub)"
-    printf '  %-8s %s\n' lan     "$(ip_lan)"
-    printf '  %-8s %s\n' ping    "$(ping_ms)"
-    printf '  %-8s %s'   network "$(network)"
-)"
+# Flat (Key, Value) cell pairs for zenity --list, same logical
+# groups as before. Zenity renders list cells as plain text, so
+# %, & and <> in values need no escaping.
+rows=(
+    date    "$(date_)"
+    time    "$(time_)"
+    uptime  "$(uptime_)"
+    kernel  "$(kernel_)"
+    battery "$(battery)"
+    power   "$(power)"
+    temps   "$(temps)"
+    memory  "$(memory)"
+    disk    "$(disk)"
+    volume  "$(volume)"
+    mic     "$(mic)"
+    layout  "$(layout)"
+    ws      "$(ws)"
+    windows "$(windows)"
+    ip      "$(ip_pub)"
+    lan     "$(ip_lan)"
+    ping    "$(ping_ms)"
+    network "$(network)"
+)
 
-# Send notification. dots-system-notify-center tags the
-# notification with x-dots-position:center so the patched
-# mako (branch position-hint, see patches/ in this repo)
-# routes it to the center layer-shell surface. On an
-# unpatched mako the hint is silently ignored — the
-# notification still shows up at the default anchor.
-#
-# x-canonical-private-synchronous:info replaces any previous
-# info notification in place, so spamming $mod+i doesn't
-# stack up multiple OSDs.
-notify() {
-    command -v ~/.dots/bin/dots-system-notify-center >/dev/null \
-        && ~/.dots/bin/dots-system-notify-center -a "info" -h "string:x-canonical-private-synchronous:info" "$@" \
-        || notify-send -a "info" -h "string:x-canonical-private-synchronous:info" "$@" \
-        || true
+# ─── OSD lifecycle ─────────────────────────────────────────────────────
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/dots-info-osd.pid"
+
+# True if $1 is a live process that is (still) our zenity dialog.
+# The cmdline check guards against pid reuse by an unrelated
+# process between two presses.
+osd_alive() {
+    local p="$1"
+    [[ "$p" =~ ^[0-9]+$ ]] || return 1
+    kill -0 "$p" 2>/dev/null || return 1
+    tr '\0' ' ' <"/proc/$p/cmdline" 2>/dev/null | grep -q 'zenity'
 }
 
-notify "System Info" "$body"
+# Toggle: an OSD is already up -> close it and stop here.
+if [[ -f "$PIDFILE" ]]; then
+    old=$(<"$PIDFILE")
+    rm -f "$PIDFILE"
+    if osd_alive "$old"; then
+        kill "$old" 2>/dev/null
+        exit 0
+    fi
+fi
+
+# Only drop the pidfile if it still points at *our* dialog, so a
+# fast third press that already wrote a new pid isn't clobbered
+# by this instance's exit cleanup.
+cleanup() {
+    local cur=""
+    [[ -f "$PIDFILE" ]] && cur=$(cat "$PIDFILE" 2>/dev/null)
+    [[ "$cur" == "$osd" ]] && rm -f "$PIDFILE"
+    return 0
+}
+trap cleanup EXIT
+
+zenity --list \
+    --title "System Info" \
+    --text "" \
+    --column Key --column Value \
+    --hide-header \
+    --timeout 8 \
+    "${rows[@]}" >/dev/null 2>&1 &
+osd=$!
+printf '%s\n' "$osd" >"$PIDFILE"
+wait "$osd" 2>/dev/null
+rm -f "$PIDFILE"
+exit 0

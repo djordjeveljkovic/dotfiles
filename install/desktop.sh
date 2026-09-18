@@ -51,7 +51,8 @@ paru -S --noconfirm --needed \
     waybar mako polkit-gnome \
     wl-clipboard wl-clip-persist cliphist \
     grim slurp swappy \
-    libnotify imagemagick jq
+    libnotify imagemagick jq \
+    zenity   # $mod+i system-info OSD (bin/script-info)
 
 # PipeWire audio + media keys
 paru -S --noconfirm --needed \

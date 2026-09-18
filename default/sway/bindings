@@ -33,6 +33,8 @@ bindsym $mod+Shift+n exec ~/.dots/bin/script-toggle-theme
 
 # Scripts & Info
 bindsym $mod+Control+i exec ~/.dots/bin/script-toggle-idle
+# script-info: centered floating zenity --list OSD; closes after
+# 8s or on a second press. Float rule in default/sway/windows.
 bindsym $mod+i exec ~/.dots/bin/script-info
 bindsym $mod+Shift+p exec ~/.dots/bin/script-show-keybindings
 bindsym $mod+v exec "cliphist list | fuzzel --dmenu | cliphist decode | wl-copy"

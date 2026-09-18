@@ -10,6 +10,10 @@ for_window [class="xdg-desktop-portal-gtk" title="^(Open.*Files?|Save.*Files?|Al
 
 for_window [title="^(System Monitor|Monitor Manager)$"] floating enable, move position center, resize set width 519 height 439
 
+# $mod+i system-info OSD (bin/script-info -> zenity --list). zenity
+# --list is resizable, so without this sway would tile it.
+for_window [app_id="zenity" title="^System Info$"] floating enable, move position center, resize set width 560 px height 620 px
+
 # --- Opacity Rules ---
 # Sway standard does not support window opacity out of the box. 
 # It requires SwayFX. We define standard SwayFX opacity rules here:
