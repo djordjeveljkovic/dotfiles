@@ -7,3 +7,4 @@ source ~/.dots/default/bash/envs
 source ~/.dots/default/bash/music
 bind -f ~/.dots/default/bash/inputrc
 export PATH=$PATH:/home/usrtmp/Android/Sdk/platform-tools
+export PATH=$PATH:/home/usrtmp/.config/composer/vendor/bin
